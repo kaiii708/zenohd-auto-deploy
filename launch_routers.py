@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import signal
 import os
 import sys
@@ -38,10 +38,13 @@ class Router():
         self.mode = config.get('mode')
         if config.get('zid').get('set'):
             self.zid = config.get('zid').get('value')
+        else:
+            self.zid = False
         self.listen_endpoint = config.get('listen_endpoint')
         self.is_localhost = "localhost" in self.launch_ip
         self.listen_port = self.listen_endpoint.split("/")[-1].split(":")[-1]
         self.session_name = f"zenohd_{self.listen_port}"
+        self.volume = self.config.get('volume') or network_config.get('volume')
 
         self.launch_zenohd()
 
@@ -67,11 +70,17 @@ class Router():
         kill_session_command = f"tmux kill-session -t {self.session_name} 2>/dev/null || true && "
         chdir_command = f"mkdir -p {base_dir} && cd {base_dir} && "
         if self.docker:
+            volume_arg = ""
+            if self.volume:
+                host_path = os.path.abspath(self.volume)
+                volume_arg = f"-v {host_path}:/zenohd"
+
+            docker_run_cmd = f"docker run --init -e RUST_LOG=trace --rm {volume_arg} -p {self.listen_port}:7447/tcp {image}"
             if image_clean:
                 clean_image = f"docker rmi {image} 2>/dev/null || true && "
-                zenohd_launch = clean_image + chdir_command + f"docker run --init --rm -p {self.listen_port}:7447/tcp {image}"
+                zenohd_launch = clean_image + chdir_command + docker_run_cmd
             else:
-                zenohd_launch = chdir_command + f"docker run --init --rm -p {self.listen_port}:7447/tcp {image}"
+                zenohd_launch = chdir_command + docker_run_cmd
         else:
             zenohd_launch = chdir_command + "zenohd"
         

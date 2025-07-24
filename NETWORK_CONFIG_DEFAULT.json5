@@ -9,6 +9,10 @@
         clean_first: true
     },
 
+    /// (Optional) Path to the host zenohd binary, mounted into the container at /zenohd.
+    /// Example: "/home/user/zenoh/target/release/zenohd"
+    // volume: "<host_zenohd_path>",
+
     /// Username for SSH access to remote hosts
     user_name: "<your_ssh_username>",
 
@@ -21,6 +25,10 @@
             /// Run zenohd inside a Docker container.
             /// If not using Docker, ensure zenohd is built on the host and can be executed directly using the `zenohd` command.
             docker: true,
+
+            /// (Optional) Path to the host zenohd binary, mounted into the container at /zenohd.
+            /// Overrides the global volume setting if present.
+            // volume: "<host_zenohd_path>",
 
             /// Zenoh runtime identifier (unsigned 128-bit integer in lowercase hexadecimal)
             /// If "set" is false, a random unique identifier will be generated

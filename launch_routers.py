@@ -4,6 +4,7 @@ import os
 import sys
 import subprocess
 import json5
+import time
 
 
 def signal_handler(sig, frame):
@@ -43,8 +44,11 @@ class Router():
         self.listen_endpoint = config.get('listen_endpoint')
         self.is_localhost = "localhost" in self.launch_ip
         self.listen_port = self.listen_endpoint.split("/")[-1].split(":")[-1]
-        self.session_name = f"zenohd_{self.listen_port}"
+        self.session_name = f"zenohd_{self.id}"
         self.volume = self.config.get('volume') or network_config.get('volume')
+        self.connect_endpoint = self.config.get('connect_endpoint') or None
+        if self.connect_endpoint:
+            self.port_expose = self.config.get('port_expose')
 
         self.launch_zenohd()
 
@@ -73,9 +77,12 @@ class Router():
             volume_arg = ""
             if self.volume:
                 host_path = os.path.abspath(self.volume)
-                volume_arg = f"-v {host_path}:/zenohd"
+                volume_arg = f"-v {host_path}:/zenoh"
 
-            docker_run_cmd = f"docker run --init -e RUST_LOG=trace --rm {volume_arg} -p {self.listen_port}:7447/tcp {image}"
+            docker_run_cmd = f"docker run --init -e RUST_LOG=trace --rm {volume_arg}"
+            if self.connect_endpoint:
+                docker_run_cmd += f" -p {self.port_expose}:7447/tcp"
+            docker_run_cmd += f" {image}"
             if image_clean:
                 clean_image = f"docker rmi {image} 2>/dev/null || true && "
                 zenohd_launch = clean_image + chdir_command + docker_run_cmd
@@ -93,7 +100,7 @@ class Router():
         if self.zid:
             base_command += f" -i {self.zid}"
         if self.mode == "l":
-            base_command += f" -l tcp/0.0.0.0:{self.listen_port}"
+            base_command += f" -l tcp/0.0.0.0:7447"
         elif self.mode == "e":
             connect_points = self.config['connect']
             for remote_id in connect_points:
@@ -155,8 +162,9 @@ if __name__ == "__main__":
     for router_id, router_config in routers.items():
         
         router_list.append(Router(router_id, router_config))
-        for router in router_list:
-            router.check_if_error_while_launch()
+        time.sleep(1)
+        # for router in router_list:
+        #     router.check_if_error_while_launch()
 
     print("All routers have been launched.\n")
 

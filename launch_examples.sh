@@ -16,20 +16,32 @@ DOCKER_IMAGE="kaiii708/zenoh:volume"
 EXPOSE_PORT=7447
 # --- Script Logic ---
 
-# Check if an argument (the example binary name) was provided.
-if [ -z "$1" ]; then
-  echo "Error: You must provide the name of the example binary to run."
-  echo "Usage: ./launch_examples.sh <example_name>"
+# Check if arguments were provided.
+if [ -z "$1" ] || [ -z "$2" ]; then
+  echo "Error: You must provide the example to run (in quotes) and the experiment number."
+  echo "Usage: ./launch_examples.sh \"<example_name> [example_args...]\" <experiment_number>"
   exit 1
 fi
 
-EXAMPLE_BINARY=$1
+FULL_COMMAND=$1
+EXPERIMENT=$2
+
+# Extract the binary name from the full command string to use for the log file name.
+EXAMPLE_BINARY=$(echo "${FULL_COMMAND}" | cut -d' ' -f1)
+
+LOG_FILE="${EXAMPLE_BINARY%.*}.log"
+EXPERIMENT_DIR="experiment_data/${EXPERIMENT}"
+
+# Create the experiment directory.
+mkdir -p "${EXPERIMENT_DIR}"
 
 # This is the command that will be executed inside the container.
 # 'exec ./${EXAMPLE_BINARY}': Executes the example binary. Using 'exec' is a
 # good practice as it replaces the shell, ensuring signals like Ctrl+C
 # are passed directly to your program.
-COMMAND_TO_RUN="exec /zenoh/examples/${EXAMPLE_BINARY} --mode client --no-multicast-scouting"
+# The output is piped to 'tee' to both display it and save it to a log file.
+FULL_COMMAND="${FULL_COMMAND} --mode client --no-multicast-scouting"
+COMMAND_TO_RUN="exec /zenoh/examples/${FULL_COMMAND} 2>&1 | tee /${EXPERIMENT_DIR}/${LOG_FILE}"
 
 echo "--- Starting Zenoh example '${EXAMPLE_BINARY}' in Docker ---"
 
@@ -46,6 +58,7 @@ docker run \
   --rm \
   --entrypoint /bin/sh \
   -v "${ZENOH_TARGET_PATH}:/zenoh" \
+  -v "$(pwd)/experiment_data:/experiment_data" \
   "${DOCKER_IMAGE}" \
   -c "${COMMAND_TO_RUN}"
 
@@ -56,7 +69,8 @@ echo "--- Docker container exited. ---"
 
 
 
-# ---------------
+
+# --------------- 
 
 # #!/bin/sh
 

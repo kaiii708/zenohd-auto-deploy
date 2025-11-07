@@ -7,10 +7,8 @@ import json5
 import time
 
 
-def signal_handler(sig, frame):
-    print(f"\nReceived signal:{sig}, leaving...\n")
-    
-    if router_list:
+def cleanup():
+    if 'router_list' in globals() and router_list:
         # print("Cleaning up tmux sessions for all routers...\n")
         # os.chdir("experiment_data")
         for router in router_list:
@@ -24,6 +22,14 @@ def signal_handler(sig, frame):
                 # print(f"Failed to kill tmux session for Router {router.id}: {e}\n")
                 print(f"An error occurred while performing the cleanup for Router {router.id}: {e}\n")
 
+            try:
+                router.cleanup_netns_veth()
+            except Exception as e:
+                print(f"An error occurred while performing the cleanup for veth {router.id}: {e}\n")
+
+def signal_handler(sig, frame):
+    print(f"\nReceived signal:{sig}, leaving...\n")
+    cleanup()
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     os.killpg(process_group_id, signal.SIGTERM)
     sys.exit(0)
@@ -51,6 +57,8 @@ class Router():
             self.port_expose = self.config.get('port_expose')
 
         self.launch_zenohd()
+        time.sleep(1)
+        self.setup_netns_veth()
 
     def run_shell_command(self, command):
         print(f"Running command: {command}\n")
@@ -68,6 +76,25 @@ class Router():
         command = f"rsync -avP {user_name}@{self.launch_ip}:~/{base_dir} ./experiment_data"
         self.run_shell_command(command)
 
+    def cleanup_netns_veth(self):
+        name = f"{self.id}"
+        print(f"Cleaning up for Node {self.id}...\n")
+        self.run_shell_command(f"sudo iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true")
+
+        self.run_shell_command(f"sudo ip link del br_{name} 2>/dev/null || true")
+        self.run_shell_command(f"sudo ip link del tap_{name} 2>/dev/null || true")
+        # self.run_shell_command(f"sudo ip link del internal_{name} 2>/dev/null || true")
+        # self.run_shell_command(f"sudo ip link del external_{name} 2>/dev/null || true")
+
+    # def cleanup(self):
+
+    #     for idx in range(len(self.listen_endpoints)):
+    #         self.cleanup_netns_veth(idx)
+    #     self.run_shell_command("sudo rm -f /var/run/netns/* 2>/dev/null || true")
+    #     # self.run_shell_command(f"docker container rm -f {self.session_name} 2>/dev/null || true")
+    #     self.run_shell_command(f"tmux kill-session -t {self.session_name} 2>/dev/null || true")
+
+
     def launch_zenohd(self):
         print(f"Launching zenohd for Router {self.id}...\n")
 
@@ -79,7 +106,7 @@ class Router():
                 host_path = os.path.abspath(self.volume)
                 volume_arg = f"-v {host_path}:/zenoh"
 
-            docker_run_cmd = f"docker run --init -e RUST_LOG=trace --rm {volume_arg}"
+            docker_run_cmd = f"docker run --init --name {self.session_name} --network none --rm {volume_arg}"
             if self.connect_endpoint:
                 docker_run_cmd += f" -p {self.port_expose}:7447/tcp"
             docker_run_cmd += f" {image}"
@@ -112,7 +139,33 @@ class Router():
             base_command += "\""
 
         self.run_shell_command(base_command)
-    
+
+    def setup_netns_veth(self):
+        addr = self.listen_endpoint.split('/')[1].split(':')[0]
+        name = f"{self.id}"
+        self.run_shell_command(f"sudo ip tuntap add tap_{name} mode tap")
+        self.run_shell_command(f"sudo ip link set tap_{name} promisc on up")
+
+        self.run_shell_command(f"sudo ip link add name br_{name} type bridge")
+        self.run_shell_command(f"sudo ip link set br_{name} up")
+        self.run_shell_command(f"sudo ip link set tap_{name} master br_{name}")
+
+        self.run_shell_command(f"sudo iptables -I FORWARD -m physdev --physdev-is-bridged -i br_{name}  -j ACCEPT")
+
+        pid = subprocess.check_output(f"docker inspect --format '{{{{ .State.Pid }}}}' {self.session_name}", shell=True).decode().strip()
+
+        self.run_shell_command("sudo mkdir -p /var/run/netns")
+        self.run_shell_command(f"sudo ln -sf /proc/{pid}/ns/net  /var/run/netns/{pid}")
+
+        self.run_shell_command(f"sudo ip link add internal_{name}  type veth peer name external_{name}")
+        self.run_shell_command(f"sudo ip link set internal_{name}  master br_{name}")
+        self.run_shell_command(f"sudo ip link set internal_{name}  up")
+        self.run_shell_command(f"sudo ip link set external_{name}  netns {pid}")
+
+        self.run_shell_command(f"sudo ip netns exec {pid}  ip link set dev external_{name} name eth0")
+        self.run_shell_command(f"sudo ip netns exec {pid}  ip link set eth0 up")
+        self.run_shell_command(f"sudo ip netns exec {pid}  ip addr add {addr}/24 dev eth0")
+
     def check_if_error_while_launch(self):
         if self.is_localhost:
             command = "cat /tmp/exit_code"
@@ -159,15 +212,20 @@ if __name__ == "__main__":
     # os.chdir(base_dir)
     
     router_list = []
-    for router_id, router_config in routers.items():
-        
-        router_list.append(Router(router_id, router_config))
-        time.sleep(1)
+    try:
+        for router_id, router_config in routers.items():
+
+            router_list.append(Router(router_id, router_config))
+            time.sleep(1)
         # for router in router_list:
         #     router.check_if_error_while_launch()
 
-    print("All routers have been launched.\n")
+        print("All routers have been launched.\n")
 
+    except Exception as e:
+        print(f"An unhandled exception occurred: {e}", file=sys.stderr)
+        cleanup()
+        sys.exit(1)
     # client_list = []
     # for client_id, 
     signal.pause()

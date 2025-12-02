@@ -48,6 +48,10 @@
             /// This config maps Docker's internal port 7447 to the specified host port.
             listen_endpoint: "<proto>/<address>:<port>",
 
+            /// (Optional) Default gateway IP for the container's network namespace
+            /// Example: "10.2.0.2"
+            // default_route: "<gateway_ip>",
+
             /// List of router IDs to connect to (e.g., [2, 3]). Leave empty when in listen mode.
             connect: []
         }

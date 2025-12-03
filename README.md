@@ -111,3 +111,30 @@ Press `Ctrl+C` to gracefully shut down all Zenoh routers and collect experiment 
 - Logs:
   - `zenohd_<id>.log`: Standard output
   - `zenohd_<id>_err.log`: Standard error
+
+---
+
+## Network Simulator Integration (launch_nodes.py)
+
+For experiments requiring network simulation (e.g., ns-3), use `launch_nodes.py` instead. This script launches both routers and clients with network namespace setup.
+
+### Usage
+
+```bash
+chmod +x launch_nodes.py
+./launch_nodes.py
+```
+
+### TAP Device Naming
+
+The script creates TAP devices that can be connected to network simulators:
+
+| Node Type | TAP Name | Example |
+|-----------|----------|---------|
+| Router | `tap_edge{id}` | `tap_edge1`, `tap_edge2` |
+| Client | `tap_{executable}` | `tap_z_sub`, `tap_z_pub` |
+
+### Additional Configuration Options
+
+- **`default_route`**: Set default gateway for routers and clients (required for ns-3 routing)
+- **`clients`**: Define client nodes with executable, connect endpoints, and multicast scouting options

@@ -231,6 +231,9 @@ class Client():
         self.connect_routers = config.get('connect_router', [])
         self.default_route = config.get('default_route')
 
+        # Get cfg options (list of key:value strings for --cfg arguments)
+        self.cfg_options = config.get('cfg', [])
+
         self.launch_client()
         time.sleep(1)
         self.setup_netns_veth()
@@ -293,6 +296,10 @@ class Client():
         client_cmd += " --mode client"
         if self.no_multicast_scouting:
             client_cmd += " --no-multicast-scouting"
+
+        # Add cfg options (e.g., connect/exit_on_failure:false, connect/timeout_ms:-1)
+        for cfg_option in self.cfg_options:
+            client_cmd += f" --cfg '{cfg_option}'"
 
         # Full docker command with shell execution, redirection outside docker (in tmux bash)
         # Use double quotes for -c argument to avoid breaking outer single quotes in tmux send-keys

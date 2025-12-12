@@ -7,7 +7,7 @@ __pycache__/
 venv/
 
 # User-specific configuration
-NETWORK_CONFIG.json5
+# NETWORK_CONFIG.json5
 
 # Logs
 *.log

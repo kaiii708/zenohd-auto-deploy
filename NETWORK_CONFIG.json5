@@ -1,0 +1,104 @@
+{
+    experiment: "72",
+    docker_image: {
+        tag: "kaiii708/zenoh:volume",
+        clean_first: false,
+    },
+
+    volume: "/home/vivian/dev/zenoh/target/x86_64-unknown-linux-musl/release",
+    user_name: "yuv",
+    routers: {
+        "0": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "c10274ef26525ccdb47947a9dfdd7f01"
+                // The identifier (as unsigned 128bit integer in hexadecimal lowercase - leading zeros are not accepted)
+            },
+            listen_endpoint: "tcp/10.1.1.3:7447",
+            // listen_endpoint: "tcp/172.17.0.2:7447",
+            default_route: "10.1.1.1",
+            // connect_endpoint: true,
+            // port_expose: 7447,
+            connect: [1],
+            // connect: [1]
+            // By the way, the connect points cannot be someone who is on localhost
+        },
+        "1": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "bef96187ff749ce9379ef4257d963e18"
+            },
+            listen_endpoint: "tcp/10.2.1.3:7447",
+            // listen_endpoint: "tcp/172.17.0.3:7447",
+            default_route: "10.2.1.1",
+            connect: [],
+            // connect: [2,3],
+            // connect: [3,5]
+        },
+        // "2": {
+        //     ssh: "localhost",
+        //     docker: true,
+        //     mode: "e",
+        //     zid: {
+        //         set: true,
+        //         value: "c7e03633b8e7a3a65e14fc8185587de3"
+        //     },
+        //     // listen_endpoint: "tcp/10.0.0.3:7447",
+        //     // listen_endpoint: "tcp/172.17.0.4:7447",
+        //     listen_endpoint: "tcp/7.0.1.5:7447",
+        //     default_route: "7.0.1.1",
+        //     // connect_endpoint: true,
+        //     // port_expose: 7449,
+        //     connect: [0, 1]
+        // },
+        // "3": {
+        //     ssh: "localhost",
+        //     docker: true,
+        //     mode: "e",
+        //     zid: {
+        //         set: true,
+        //         value: "12810fef4c61448a81e14160be8c8f3a"
+        //     },
+        //     listen_endpoint: "tcp/172.17.0.5:7447",
+        //     connect: []
+        // },
+        // "5": {
+        //     ssh: "140.112.175.26",
+        //     docker: true,
+        //     mode: "e",
+        //     zid: {
+        //         set: true,
+        //         value: "849ae863a7d840598975bc2b625f9269"
+        //     },
+        //     listen_endpoint: "tcp/140.112.175.26:8789",
+        //     connect: [4]
+        // },
+    },
+    // Clients are not available yet
+    clients: {
+        "1": {
+            ssh: "localhost",
+            excutable: "z_pre_sub",
+            mode: "client",
+            zid: {
+                set: true,
+                value: "a09dd826e1c88cfd06d5d6f4cc0eb5b6"
+            },
+            enabled_multicast_scounting: true,
+            listen_ip: "7.0.1.5",
+            default_route: "7.0.1.1",
+            connect_router: [0,1],
+            // cfg options for --cfg arguments (connect retry settings)
+            cfg: [
+                // "connect/timeout_ms:-1",
+                // 'connect/retry:{"period_init_ms":50,"period_max_ms":500,"period_increase_factor":1.2}'
+            ],
+        }
+    }
+}

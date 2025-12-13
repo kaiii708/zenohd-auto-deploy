@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import signal
 import os
 import sys
@@ -280,7 +281,7 @@ class Client():
         docker_run_cmd = f"docker run --init --name {self.session_name} --network none --rm --entrypoint /bin/sh {volume_arg} {image}"
 
         # Build the client executable command
-        client_cmd = f"sleep 15 && /zenoh/examples/{self.executable}"
+        client_cmd = f"sleep 10 && /zenoh/examples/{self.executable}"
 
         # Add zid if set
         if self.zid:
@@ -351,12 +352,78 @@ class Client():
             self.run_shell_command(f"sudo ip netns exec {pid} ip route add default via {self.default_route}")
 
 
+def cleanup_only():
+    """Run cleanup for all nodes defined in config without launching them."""
+    print("Running cleanup only mode...\n")
+
+    # Cleanup clients first
+    for client_id, client_config in clients.items():
+        try:
+            # Create a minimal client object just for cleanup
+            name = client_config.get('excutable')
+            veth_name = f"c{client_id}"
+            session_name = f"client_{name}_{client_id}"
+            launch_ip = client_config.get('ssh')
+            is_localhost = "localhost" in launch_ip
+
+            print(f"Cleaning up Client {client_id} ({name})...\n")
+
+            # Kill tmux session
+            kill_session_command = f"tmux kill-session -t {session_name} 2>/dev/null || true"
+            if is_localhost:
+                subprocess.run(kill_session_command, shell=True)
+            else:
+                subprocess.run(f"ssh {user_name}@{launch_ip} \"{kill_session_command}\"", shell=True)
+
+            # Cleanup network resources
+            subprocess.run(f"sudo iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true", shell=True)
+            subprocess.run(f"sudo ip link del int_{veth_name} 2>/dev/null || true", shell=True)
+            subprocess.run(f"sudo ip link del br_{name} 2>/dev/null || true", shell=True)
+            subprocess.run(f"sudo ip link del tap_{name} 2>/dev/null || true", shell=True)
+
+            print(f"Cleanup complete for Client {client_id}\n")
+        except Exception as e:
+            print(f"Error cleaning up Client {client_id}: {e}\n")
+
+    # Then cleanup routers
+    for router_id, router_config in routers.items():
+        try:
+            name = f"edge{router_id}"
+            session_name = f"zenohd_{router_id}"
+            launch_ip = router_config.get('ssh')
+            is_localhost = "localhost" in launch_ip
+
+            print(f"Cleaning up Router {router_id}...\n")
+
+            # Kill tmux session
+            kill_session_command = f"tmux kill-session -t {session_name} 2>/dev/null || true"
+            if is_localhost:
+                subprocess.run(kill_session_command, shell=True)
+            else:
+                subprocess.run(f"ssh {user_name}@{launch_ip} \"{kill_session_command}\"", shell=True)
+
+            # Cleanup network resources
+            subprocess.run(f"sudo iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true", shell=True)
+            subprocess.run(f"sudo ip link del internal_{name} 2>/dev/null || true", shell=True)
+            subprocess.run(f"sudo ip link del br_{name} 2>/dev/null || true", shell=True)
+            subprocess.run(f"sudo ip link del tap_{name} 2>/dev/null || true", shell=True)
+
+            print(f"Cleanup complete for Router {router_id}\n")
+        except Exception as e:
+            print(f"Error cleaning up Router {router_id}: {e}\n")
+
+    print("Cleanup only mode complete.\n")
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Launch Zenoh nodes with network namespace support')
+    parser.add_argument('-c', '--clean', action='store_true',
+                        help='Only run cleanup for all nodes without launching them')
+    args = parser.parse_args()
+
     process_group_id = os.getpgid(os.getpid())
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-
-
 
     # Load configuration from the JSON5 file
     with open('NETWORK_CONFIG.json5', 'r') as config_file:
@@ -376,18 +443,23 @@ if __name__ == "__main__":
     client_list = []
     clients = network_config.get('clients', {})
 
+    # If --clean flag is set, only run cleanup and exit
+    if args.clean:
+        cleanup_only()
+        sys.exit(0)
+
     try:
         # Launch routers first
         for router_id, router_config in routers.items():
             router_list.append(Router(router_id, router_config))
-            time.sleep(1)
+            # time.sleep(1)
 
         print("All routers have been launched.\n")
 
         # Launch clients after routers
         for client_id, client_config in clients.items():
             client_list.append(Client(client_id, client_config))
-            time.sleep(1)
+            # time.sleep(1)
 
         if client_list:
             print("All clients have been launched.\n")

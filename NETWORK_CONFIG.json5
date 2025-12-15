@@ -16,16 +16,10 @@
             zid: {
                 set: true,
                 value: "c10274ef26525ccdb47947a9dfdd7f01"
-                // The identifier (as unsigned 128bit integer in hexadecimal lowercase - leading zeros are not accepted)
             },
             listen_endpoint: "tcp/10.1.1.3:7447",
-            // listen_endpoint: "tcp/172.17.0.2:7447",
             default_route: "10.1.1.1",
-            // connect_endpoint: true,
-            // port_expose: 7447,
-            connect: [1],
-            // connect: [1]
-            // By the way, the connect points cannot be someone who is on localhost
+            connect: [1, 2],
         },
         "1": {
             ssh: "localhost",
@@ -36,50 +30,69 @@
                 value: "bef96187ff749ce9379ef4257d963e18"
             },
             listen_endpoint: "tcp/10.2.1.3:7447",
-            // listen_endpoint: "tcp/172.17.0.3:7447",
             default_route: "10.2.1.1",
-            connect: [],
-            // connect: [2,3],
-            // connect: [3,5]
+            connect: [3],
         },
-        // "2": {
-        //     ssh: "localhost",
-        //     docker: true,
-        //     mode: "e",
-        //     zid: {
-        //         set: true,
-        //         value: "c7e03633b8e7a3a65e14fc8185587de3"
-        //     },
-        //     // listen_endpoint: "tcp/10.0.0.3:7447",
-        //     // listen_endpoint: "tcp/172.17.0.4:7447",
-        //     listen_endpoint: "tcp/7.0.1.5:7447",
-        //     default_route: "7.0.1.1",
-        //     // connect_endpoint: true,
-        //     // port_expose: 7449,
-        //     connect: [0, 1]
-        // },
-        // "3": {
-        //     ssh: "localhost",
-        //     docker: true,
-        //     mode: "e",
-        //     zid: {
-        //         set: true,
-        //         value: "12810fef4c61448a81e14160be8c8f3a"
-        //     },
-        //     listen_endpoint: "tcp/172.17.0.5:7447",
-        //     connect: []
-        // },
-        // "5": {
-        //     ssh: "140.112.175.26",
-        //     docker: true,
-        //     mode: "e",
-        //     zid: {
-        //         set: true,
-        //         value: "849ae863a7d840598975bc2b625f9269"
-        //     },
-        //     listen_endpoint: "tcp/140.112.175.26:8789",
-        //     connect: [4]
-        // },
+        "2": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "7c3d8f2a1b4e6590a8d2f7c3e9b1405d"
+            },
+            listen_endpoint: "tcp/10.3.1.3:7447",
+            default_route: "10.3.1.1",
+            connect: [3, 4],
+        },
+        "3": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "2e9a4c6f8d1b3570c9e2a5d8f0b74631"
+            },
+            listen_endpoint: "tcp/10.4.1.3:7447",
+            default_route: "10.4.1.1",
+            connect: [5],
+        },
+        "4": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "5f1c9e3a7d0b8264f6c1a9e3d7b05842"
+            },
+            listen_endpoint: "tcp/10.5.1.3:7447",
+            default_route: "10.5.1.1",
+            connect: [5, 6],
+        },
+        "5": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "8a2d6f0c4e9b1753a8d2f6c0e4b91765"
+            },
+            listen_endpoint: "tcp/10.6.1.3:7447",
+            default_route: "10.6.1.1",
+            connect: [6],
+        },
+        "6": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "3b7e1a5d9f0c4826b3e7a1d5f9c04837"
+            },
+            listen_endpoint: "tcp/10.7.1.3:7447",
+            default_route: "10.7.1.1",
+            connect: [],
+        },
     },
     // Clients are not available yet
     clients: {
@@ -94,10 +107,10 @@
             enabled_multicast_scounting: true,
             listen_ip: "7.0.1.5",
             default_route: "7.0.1.1",
-            connect_router: [0,1],
+            connect_router: [0,1,2,3,4,5,6],
             // cfg options for --cfg arguments (connect retry settings)
             cfg: [
-                // "connect/timeout_ms:-1",
+                "connect/timeout_ms:-1",
                 // 'connect/retry:{"period_init_ms":50,"period_max_ms":500,"period_increase_factor":1.2}'
             ],
         }

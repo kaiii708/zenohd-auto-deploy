@@ -70,6 +70,7 @@ class Router():
         self.listen_port = self.listen_endpoint.split("/")[-1].split(":")[-1]
         self.session_name = f"zenohd_{self.id}"
         self.volume = self.config.get('volume') or network_config.get('volume')
+        self.ns3_handover_dir = network_config.get('ns3_handover_dir')
         self.connect_endpoint = self.config.get('connect_endpoint') or None
         if self.connect_endpoint:
             self.port_expose = self.config.get('port_expose')
@@ -125,6 +126,9 @@ class Router():
             if self.volume:
                 host_path = os.path.abspath(self.volume)
                 volume_arg = f"-v {host_path}:/zenoh"
+            if self.ns3_handover_dir:
+                handover_path = os.path.abspath(self.ns3_handover_dir)
+                volume_arg += f" -v {handover_path}:/mnt"
 
             docker_run_cmd = f"docker run --init --name {self.session_name} --network none --rm {volume_arg}"
             if self.connect_endpoint:
@@ -449,6 +453,10 @@ if __name__ == "__main__":
         sys.exit(0)
 
     try:
+        # Ensure ns3_handover directory exists before launching routers
+        subprocess.run("mkdir -p /tmp/ns3_handover", shell=True, check=True)
+        subprocess.run("rm -f /tmp/ns3_handover/ns3_handover.json", shell=True, check=True)
+
         # Launch routers first
         for router_id, router_config in routers.items():
             router_list.append(Router(router_id, router_config))

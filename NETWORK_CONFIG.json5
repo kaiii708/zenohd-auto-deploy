@@ -6,6 +6,7 @@
     },
 
     volume: "/home/vivian/dev/zenoh/target/x86_64-unknown-linux-musl/release",
+    ns3_handover_dir: "/tmp/ns3_handover",
     user_name: "yuv",
     routers: {
         "0": {

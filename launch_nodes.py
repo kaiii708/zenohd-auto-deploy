@@ -220,6 +220,7 @@ class Client():
 
         self.launch_ip = config.get('ssh')
         self.executable = config.get('excutable')  # Note: typo in config
+        self.tap_br_name = config.get('tap_br_name')  # Use tap_br_name from config for bridge naming
         self.is_localhost = "localhost" in self.launch_ip
         self.session_name = f"client_{self.executable}_{self.id}"
         self.listen_ip = config.get('listen_ip')
@@ -260,7 +261,7 @@ class Client():
         self.run_shell_command(command)
 
     def cleanup_netns_veth(self):
-        name = f"{self.executable}"
+        name = self.tap_br_name
         veth_name = f"c{self.id}"
         print(f"Cleaning up for Client {self.id} ({self.executable})...\n")
         self.run_shell_command(f"sudo iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true")
@@ -325,7 +326,7 @@ class Client():
 
     def setup_netns_veth(self):
         addr = self.listen_ip
-        name = f"{self.executable}"
+        name = self.tap_br_name
         # Use shorter names for veth pairs (Linux limit is 15 chars)
         # Use client id for veth to keep it short: int_c1, ext_c1
         veth_name = f"c{self.id}"
@@ -364,13 +365,14 @@ def cleanup_only():
     for client_id, client_config in clients.items():
         try:
             # Create a minimal client object just for cleanup
-            name = client_config.get('excutable')
+            executable = client_config.get('excutable')
+            name = client_config.get('tap_br_name')
             veth_name = f"c{client_id}"
-            session_name = f"client_{name}_{client_id}"
+            session_name = f"client_{executable}_{client_id}"
             launch_ip = client_config.get('ssh')
             is_localhost = "localhost" in launch_ip
 
-            print(f"Cleaning up Client {client_id} ({name})...\n")
+            print(f"Cleaning up Client {client_id} ({executable})...\n")
 
             # Kill tmux session
             kill_session_command = f"tmux kill-session -t {session_name} 2>/dev/null || true"

@@ -458,6 +458,8 @@ if __name__ == "__main__":
         # Ensure ns3_handover directory exists before launching routers
         subprocess.run("mkdir -p /tmp/ns3_handover", shell=True, check=True)
         subprocess.run("rm -f /tmp/ns3_handover/ns3_handover.json", shell=True, check=True)
+        subprocess.run("rm -f /tmp/ns3_handover/ns3_handover_event.json", shell=True, check=True)
+        subprocess.run("touch /tmp/ns3_handover/ns3_handover_event.json", shell=True, check=True)
 
         # Launch routers first
         for router_id, router_config in routers.items():

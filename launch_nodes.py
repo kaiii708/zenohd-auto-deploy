@@ -79,6 +79,7 @@ class Router():
         self.launch_zenohd()
         time.sleep(1)
         self.setup_netns_veth()
+        time.sleep(1)
 
     def run_shell_command(self, command):
         print(f"Running command: {command}\n")
@@ -225,6 +226,7 @@ class Client():
         self.session_name = f"client_{self.executable}_{self.id}"
         self.listen_ip = config.get('listen_ip')
         self.volume = network_config.get('volume')
+        self.ns3_handover_dir = network_config.get('ns3_handover_dir')
         self.no_multicast_scouting = not config.get('enabled_multicast_scounting', False)
 
         # Get zid if set
@@ -281,6 +283,9 @@ class Client():
         if self.volume:
             host_path = os.path.abspath(self.volume)
             volume_arg = f"-v {host_path}:/zenoh"
+        if self.ns3_handover_dir:
+            handover_path = os.path.abspath(self.ns3_handover_dir)
+            volume_arg += f" -v {handover_path}:/mnt"
 
         # Build the docker command - using --network none like Router
         docker_run_cmd = f"docker run --init --name {self.session_name} --network none --rm --entrypoint /bin/sh {volume_arg} {image}"

@@ -432,6 +432,9 @@ if __name__ == "__main__":
                         help='Only run cleanup for all nodes without launching them')
     args = parser.parse_args()
 
+    # Create our own process group so killpg() in signal handler only affects
+    # this process and its children, not the parent shell script
+    os.setpgrp()
     process_group_id = os.getpgid(os.getpid())
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)

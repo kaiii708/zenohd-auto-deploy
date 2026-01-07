@@ -1,7 +1,7 @@
 {
     experiment: "72",
     docker_image: {
-        tag: "kaiii708/zenoh:volume",
+        tag: "kaiii708/zenoh:connection_trace",
         clean_first: false,
     },
 
@@ -111,7 +111,7 @@
             connect_router: [0,1,2,3,4,5,6],
             // cfg options for --cfg arguments (connect retry settings)
             cfg: [
-                "connect/timeout_ms:-1",
+                "connect/timeout_ms:-2",
                 // 'connect/retry:{"period_init_ms":50,"period_max_ms":500,"period_increase_factor":1.2}'
             ],
         },

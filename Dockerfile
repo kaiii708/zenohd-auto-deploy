@@ -21,5 +21,4 @@ zenoh::net::routing::hat::router::pubsub=trace,\
 zenoh::net::routing::hat::router=trace,\
 zenoh::net::routing::hat::client::pubsub=trace,\
 zenoh::net::routing::hat::client=trace,\
-zenoh::api::session=trace,\
 zenoh::net::runtime::orchestrator=trace

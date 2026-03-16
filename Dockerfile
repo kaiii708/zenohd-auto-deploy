@@ -13,12 +13,12 @@ WORKDIR /
 # COPY zenohd zenohd
 
 # RUN chmod +x zenohd
-ENV RUST_LOG=\
-zenoh::net::routing::dispatcher::resource=debug,\
-zenoh::net::routing::dispatcher::pubsub=trace,\
-zenoh::net::routing::dispatcher::face=trace,\
-zenoh::net::routing::hat::router::pubsub=trace,\
-zenoh::net::routing::hat::router=trace,\
-zenoh::net::routing::hat::client::pubsub=trace,\
-zenoh::net::routing::hat::client=trace,\
-zenoh::net::runtime::orchestrator=trace
+# ENV RUST_LOG=\
+# zenoh::net::routing::dispatcher::resource=debug,\
+# zenoh::net::routing::dispatcher::pubsub=trace,\
+# zenoh::net::routing::dispatcher::face=trace,\
+# zenoh::net::routing::hat::router::pubsub=trace,\
+# zenoh::net::routing::hat::router=trace,\
+# zenoh::net::routing::hat::client::pubsub=trace,\
+# zenoh::net::routing::hat::client=trace,\
+# zenoh::net::runtime::orchestrator=trace

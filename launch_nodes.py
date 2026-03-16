@@ -134,7 +134,8 @@ class Router():
                 handover_path = os.path.abspath(self.ns3_handover_dir)
                 volume_arg += f" -v {handover_path}:/mnt"
 
-            docker_run_cmd = f"docker run --init --name {self.session_name} --network none --rm {volume_arg}"
+            docker_run_cmd = f"docker run --cpuset-cpus='11-19' --init --name {self.session_name} --network none --rm {volume_arg}"
+            # docker_run_cmd = f"docker run --init --name {self.session_name} --network none --rm {volume_arg}"
             if self.connect_endpoint:
                 docker_run_cmd += f" -p {self.port_expose}:7447/tcp"
             docker_run_cmd += f" {image}"
@@ -295,7 +296,8 @@ class Client():
             volume_arg += f" -v {handover_path}:/mnt"
 
         # Build the docker command - using --network none like Router
-        docker_run_cmd = f"docker run --init --name {self.session_name} --network none --rm --entrypoint /bin/sh {volume_arg} {image}"
+        docker_run_cmd = f"docker run --cpuset-cpus='11-19' --init --name {self.session_name} --network none --rm --entrypoint /bin/sh {volume_arg} {image}"
+        # docker_run_cmd = f"docker run --init --name {self.session_name} --network none --rm --entrypoint /bin/sh {volume_arg} {image}"
 
         # Build the client executable command
         client_cmd = f"sleep 10 && /zenoh/examples/{self.executable}"

@@ -19,6 +19,9 @@
             },
             listen_endpoint: "tcp/10.1.1.3:7447",
             default_route: "10.1.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
             connect: [1,3,4,6],
         },
         "1": {
@@ -31,6 +34,9 @@
             },
             listen_endpoint: "tcp/10.2.1.3:7447",
             default_route: "10.2.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
             connect: [2],
         },
         "2": {
@@ -43,6 +49,9 @@
             },
             listen_endpoint: "tcp/10.3.1.3:7447",
             default_route: "10.3.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
             connect: [3],
         },
         "3": {
@@ -55,6 +64,9 @@
             },
             listen_endpoint: "tcp/10.4.1.3:7447",
             default_route: "10.4.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
             connect: [],
         },
         "4": {
@@ -67,6 +79,9 @@
             },
             listen_endpoint: "tcp/10.5.1.3:7447",
             default_route: "10.5.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
             connect: [5],
         },
         "5": {
@@ -79,6 +94,9 @@
             },
             listen_endpoint: "tcp/10.6.1.3:7447",
             default_route: "10.6.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
             connect: [6],
         },
         "6": {
@@ -91,6 +109,9 @@
             },
             listen_endpoint: "tcp/10.7.1.3:7447",
             default_route: "10.7.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
             connect: [],
         },
     },

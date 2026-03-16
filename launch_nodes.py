@@ -76,6 +76,9 @@ class Router():
             self.port_expose = self.config.get('port_expose')
         self.default_route = self.config.get('default_route')
 
+        # Get cfg options (list of key:value strings for --cfg arguments)
+        self.cfg_options = config.get('cfg', [])
+
         self.launch_zenohd()
         time.sleep(1)
         self.setup_netns_veth()
@@ -157,7 +160,11 @@ class Router():
             connect_points = self.config['connect']
             for remote_id in connect_points:
                 base_command += f" -e {routers.get(str(remote_id)).get('listen_endpoint')}"
-        
+
+        # Add cfg options (e.g., connect/exit_on_failure:false, connect/timeout_ms:-1)
+        for cfg_option in self.cfg_options:
+            base_command += f" --cfg '{cfg_option}'"
+
         base_command += f" > >(tee ./zenohd_{self.id}.log) 2> >(tee ./zenohd_{self.id}_err.log >&2)"
         base_command += "; echo \$? > /tmp/exit_code' C-m"
         if not self.is_localhost:

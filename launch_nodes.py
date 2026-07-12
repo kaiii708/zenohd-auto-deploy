@@ -440,6 +440,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Launch Zenoh nodes with network namespace support')
     parser.add_argument('-c', '--clean', action='store_true',
                         help='Only run cleanup for all nodes without launching them')
+    parser.add_argument('-t', '--time', type=float, default=None, metavar='SECONDS',
+                        help='Automatically terminate all nodes after this many seconds')
     args = parser.parse_args()
 
     # Create our own process group so killpg() in signal handler only affects
@@ -502,3 +504,13 @@ if __name__ == "__main__":
 
     print(f"Logs are saved to: {os.path.abspath(base_dir)}/\n")
 
+    if args.time is not None:
+        print(f"Simulation will terminate in {args.time} seconds.\n")
+        time.sleep(args.time)
+        print("Simulation time reached. Terminating all nodes...\n")
+        cleanup()
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        os.killpg(process_group_id, signal.SIGTERM)
+        sys.exit(0)
+    else:
+        signal.pause()

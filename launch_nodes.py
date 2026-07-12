@@ -300,6 +300,7 @@ class Client():
         # docker_run_cmd = f"docker run --init --name {self.session_name} --network none --rm --entrypoint /bin/sh {volume_arg} {image}"
 
         # Build the client executable command
+        # client_cmd = f"sleep 10 && RUST_LOG=trace /zenoh/examples/{self.executable}"
         client_cmd = f"sleep 10 && /zenoh/examples/{self.executable}"
 
         # Add zid if set

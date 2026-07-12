@@ -6,7 +6,7 @@ import sys
 import subprocess
 import json5
 import time
-
+from datetime import datetime
 
 def cleanup():
     # Cleanup clients first
@@ -459,7 +459,8 @@ if __name__ == "__main__":
     user_name = network_config.get('user_name')
     routers = network_config.get('routers', {})
 
-    base_dir = f"experiment_data/{experiment_name}"
+    timestamp = datetime.now().strftime("%m%d_%H%M")
+    base_dir = f"experiment_data/{experiment_name}/{timestamp}"
     # os.makedirs(base_dir, exist_ok=False)
     # os.chdir(base_dir)
 
@@ -499,4 +500,5 @@ if __name__ == "__main__":
         cleanup()
         sys.exit(1)
 
-    signal.pause()
+    print(f"Logs are saved to: {os.path.abspath(base_dir)}/\n")
+

@@ -1,0 +1,38 @@
+{
+    // Number of experiment rounds to run
+    "rounds": 10,
+
+    // Seconds to wait after launch_nodes.py starts before running ns-3
+    // (allows containers and TAP devices to fully initialize)
+    "launch_wait": 20,
+
+    // Pause between consecutive rounds (seconds)
+    "round_pause": 5,
+
+    // ns-3 simulation parameters for nr-mec-3gpp-calibration
+    // simTime is also used to compute launch_nodes.py -t (simTime + 20)
+    "ns3": {
+        // TAP bridge
+        "enableTap": true,
+
+        // Mobility
+        "mobilityModel": "waypoint",
+        "builtinPath": "highway",
+        "mobilityStartDelay": 10,
+
+        // NR (5G)
+        "bandwidth": 20e6,
+
+        // Simulation time (seconds)
+        "simTime": 60,
+
+        // Output directory (relative to ~/dev/ns-3-dev)
+        "experimentDir": "test",
+
+        // Cell load / background traffic
+        // "numBgUes": 1,
+        // "bgTrafficMbps": 5,
+        // "bgTargetGnbs": "5,0,2",
+        // "loadPercent": 0
+    }
+}

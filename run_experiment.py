@@ -22,10 +22,25 @@ import json5
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LAUNCH_SCRIPT = os.path.join(SCRIPT_DIR, 'launch_nodes.py')
 NS3_DIR = os.path.expanduser('~/dev/ns-3-dev')
+READY_MARKER = '/tmp/ns3_handover/nodes_ready'
 
 # Kept at module level so the signal handler can reach them
 _launch_proc = None
 _ns3_proc = None
+
+
+def _wait_for_ready(launch_proc, timeout):
+    """Poll for the readiness marker launch_nodes.py touches once every
+    router/client has finished tap/bridge/veth setup. Returns False if
+    launch_proc exits early or the timeout is exceeded."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if launch_proc.poll() is not None:
+            return False
+        if os.path.exists(READY_MARKER):
+            return True
+        time.sleep(0.5)
+    return False
 
 
 def _signal_handler(sig, frame):
@@ -69,11 +84,12 @@ def run_round(round_num: int, config: dict) -> bool:
         cwd=SCRIPT_DIR,
     )
 
-    print(f"Round {round_num}: waiting {launch_wait}s for containers to initialize...")
-    time.sleep(launch_wait)
-
-    if _launch_proc.poll() is not None:
-        print(f"Round {round_num}: ERROR — launch_nodes.py exited early (code {_launch_proc.returncode})")
+    print(f"Round {round_num}: waiting for containers/TAP devices to be ready (max {launch_wait}s)...")
+    if not _wait_for_ready(_launch_proc, launch_wait):
+        if _launch_proc.poll() is not None:
+            print(f"Round {round_num}: ERROR — launch_nodes.py exited early (code {_launch_proc.returncode})")
+        else:
+            print(f"Round {round_num}: ERROR — timed out waiting for readiness marker after {launch_wait}s")
         return False
 
     ns3_args = _build_ns3_args(ns3_config)

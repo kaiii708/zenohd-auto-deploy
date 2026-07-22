@@ -45,6 +45,8 @@ def cleanup():
             except Exception as e:
                 print(f"An error occurred while performing the cleanup for veth {router.id}: {e}\n")
 
+    subprocess.run("rm -f /tmp/ns3_handover/nodes_ready", shell=True)
+
 def signal_handler(sig, frame):
     print(f"\nReceived signal:{sig}, leaving...\n")
     cleanup()
@@ -433,6 +435,8 @@ def cleanup_only():
         except Exception as e:
             print(f"Error cleaning up Router {router_id}: {e}\n")
 
+    subprocess.run("rm -f /tmp/ns3_handover/nodes_ready", shell=True)
+
     print("Cleanup only mode complete.\n")
 
 
@@ -496,6 +500,10 @@ if __name__ == "__main__":
 
         if client_list:
             print("All clients have been launched.\n")
+
+        # Signal readiness to run_experiment.py: every router/client has
+        # finished tap/bridge/veth setup by this point.
+        subprocess.run("touch /tmp/ns3_handover/nodes_ready", shell=True, check=True)
 
     except Exception as e:
         print(f"An unhandled exception occurred: {e}", file=sys.stderr)

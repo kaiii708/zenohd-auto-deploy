@@ -2,9 +2,10 @@
     // Number of experiment rounds to run
     "rounds": 10,
 
-    // Seconds to wait after launch_nodes.py starts before running ns-3
-    // (allows containers and TAP devices to fully initialize)
-    "launch_wait": 20,
+    // Max seconds to wait for launch_nodes.py's readiness marker before
+    // aborting the round (actual wait is usually much shorter — ns-3
+    // starts as soon as all containers/TAP devices are confirmed ready)
+    "launch_wait": 45,
 
     // Pause between consecutive rounds (seconds)
     "round_pause": 5,

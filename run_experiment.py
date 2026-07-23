@@ -4,10 +4,11 @@ Experiment orchestration script.
 
 Per-round steps:
   1. Cleanup previous state via launch_nodes.py -c
-  2. Start launch_nodes.py -t {simTime+20} in the background
-  3. Wait launch_wait seconds for containers/TAP devices to initialize
+  2. Start launch_nodes.py -t {simTime+60} in the background (the timer is
+     just a fallback — see step 5)
+  3. Poll for launch_nodes.py's readiness marker (containers/TAP devices up)
   4. Run: sudo nice -n 20 taskset -c 0-10 ./ns3 run "nr-mec-3gpp-calibration ..."
-  5. Wait for ns-3 to finish, then wait for launch_nodes.py to self-terminate
+  5. Wait for ns-3 to finish, then signal launch_nodes.py to clean up
   6. Pause round_pause seconds, then start the next round
 """
 import argparse
@@ -49,7 +50,7 @@ def _signal_handler(sig, frame):
         _ns3_proc.terminate()
     if _launch_proc and _launch_proc.poll() is None:
         _launch_proc.terminate()
-    subprocess.run([sys.executable, LAUNCH_SCRIPT, '-c'], cwd=SCRIPT_DIR)
+        _launch_proc.wait()
     sys.exit(0)
 
 
@@ -71,7 +72,7 @@ def run_round(round_num: int, config: dict) -> bool:
     ns3_dir = config.get('ns3_dir', NS3_DIR)
     launch_wait = config.get('launch_wait', 12)
     sim_time = ns3_config['simTime']
-    auto_terminate = int(sim_time) + 20
+    auto_terminate = int(sim_time) + 60
 
     print(f"\n{'='*50}")
     print(f"Round {round_num}: cleanup")
@@ -102,7 +103,9 @@ def run_round(round_num: int, config: dict) -> bool:
     if ns3_exit != 0:
         print(f"Round {round_num}: WARNING — ns-3 exited with code {ns3_exit}")
 
-    print(f"Round {round_num}: waiting for launch_nodes.py to terminate...")
+    print(f"Round {round_num}: ns-3 finished, signaling launch_nodes.py to clean up...")
+    if _launch_proc.poll() is None:
+        _launch_proc.terminate()
     _launch_proc.wait()
 
     print(f"Round {round_num}: done.")

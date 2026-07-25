@@ -44,10 +44,48 @@ def _wait_for_ready(launch_proc, timeout):
     return False
 
 
+def _kill_ns3(grace=5):
+    """Send SIGINT, then SIGKILL after a grace period, to ns-3's whole
+    process group (sudo -> nice -> taskset -> the ns3 wrapper script ->
+    the compiled binary). The compiled binary is a real subprocess.run()
+    child forked by the ns3 wrapper's run_step() (see ns-3-dev/ns3), which
+    installs no signal handler of its own, so only a group-wide signal
+    (sent as root, since the binary runs fully as root) reaches it.
+
+    Deliberately does NOT call _ns3_proc.wait()/.poll() to confirm death:
+    this runs inside the SIGINT/SIGTERM handler, itself invoked as a
+    nested frame from run_round()'s blocking _ns3_proc.wait(). That outer
+    call holds Popen's internal (non-reentrant) _waitpid_lock for its
+    entire blocking duration, so any wait()/poll() from here would try to
+    re-acquire a lock this same thread already holds -- the timed variant
+    just burns its whole timeout unable to progress, and the untimed
+    fallback deadlocks permanently. Reaping is left to the OS: sys.exit(0)
+    right after this releases the lock as it unwinds, and init reaps
+    whatever's left."""
+    if _ns3_proc is None:
+        return
+
+    try:
+        pgid = os.getpgid(_ns3_proc.pid)
+    except ProcessLookupError:
+        return
+
+    def _signal_group(sig):
+        result = subprocess.run(
+            ["sudo", "-n", "kill", sig, "--", f"-{pgid}"],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0 and result.stderr.strip():
+            print(f"  (sudo kill {sig} -{pgid} failed: {result.stderr.strip()})")
+
+    _signal_group("-INT")
+    time.sleep(grace)
+    _signal_group("-KILL")
+
+
 def _signal_handler(sig, frame):
     print(f"\nReceived signal {sig}, cleaning up...")
-    if _ns3_proc and _ns3_proc.poll() is None:
-        _ns3_proc.terminate()
+    _kill_ns3()
     if _launch_proc and _launch_proc.poll() is None:
         _launch_proc.terminate()
         _launch_proc.wait()
@@ -97,7 +135,7 @@ def run_round(round_num: int, config: dict) -> bool:
     ns3_cmd = f'sudo nice -n 20 taskset -c 0-10 ./ns3 run "nr-mec-3gpp-calibration {ns3_args}"'
     print(f"\nRound {round_num}: starting ns-3")
     print(f"  {ns3_cmd}\n")
-    _ns3_proc = subprocess.Popen(ns3_cmd, shell=True, cwd=ns3_dir)
+    _ns3_proc = subprocess.Popen(ns3_cmd, shell=True, cwd=ns3_dir, start_new_session=True)
 
     ns3_exit = _ns3_proc.wait()
     if ns3_exit != 0:

@@ -1,0 +1,159 @@
+{
+    experiment: "packet_loss/presub",
+    docker_image: {
+        tag: "kaiii708/zenoh:volume_no_trace",
+        clean_first: false,
+    },
+
+    volume: "zenoh/target/pre-subscribe/x86_64-unknown-linux-musl/release",
+    ns3_handover_dir: "/tmp/ns3_handover",
+    user_name: "yuv",
+    routers: {
+        "0": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "c10274ef26525ccdb47947a9dfdd7f01"
+            },
+            listen_endpoint: "tcp/10.1.1.3:7447",
+            default_route: "10.1.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
+            connect: [1,3,4,6],
+        },
+        "1": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "bef96187ff749ce9379ef4257d963e18"
+            },
+            listen_endpoint: "tcp/10.2.1.3:7447",
+            default_route: "10.2.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
+            connect: [2],
+        },
+        "2": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "7c3d8f2a1b4e6590a8d2f7c3e9b1405d"
+            },
+            listen_endpoint: "tcp/10.3.1.3:7447",
+            default_route: "10.3.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
+            connect: [3],
+        },
+        "3": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "2e9a4c6f8d1b3570c9e2a5d8f0b74631"
+            },
+            listen_endpoint: "tcp/10.4.1.3:7447",
+            default_route: "10.4.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
+            connect: [],
+        },
+        "4": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "5f1c9e3a7d0b8264f6c1a9e3d7b05842"
+            },
+            listen_endpoint: "tcp/10.5.1.3:7447",
+            default_route: "10.5.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
+            connect: [5],
+        },
+        "5": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "8a2d6f0c4e9b1753a8d2f6c0e4b91765"
+            },
+            listen_endpoint: "tcp/10.6.1.3:7447",
+            default_route: "10.6.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
+            connect: [6],
+        },
+        "6": {
+            ssh: "localhost",
+            docker: true,
+            mode: "e",
+            zid: {
+                set: true,
+                value: "3b7e1a5d9f0c4826b3e7a1d5f9c04837"
+            },
+            listen_endpoint: "tcp/10.7.1.3:7447",
+            default_route: "10.7.1.1",
+            cfg: [
+                "connect/timeout_ms:-2",
+            ],
+            connect: [],
+        },
+    },
+    // Clients are not available yet
+    clients: {
+        "1": {
+            ssh: "localhost",
+            excutable: "z_pre_sub",
+            tap_br_name: "ue",
+            mode: "client",
+            zid: {
+                set: true,
+                value: "a09dd826e1c88cfd06d5d6f4cc0eb5b6"
+            },
+            enabled_multicast_scounting: true,
+            listen_ip: "7.0.1.5",
+            default_route: "7.0.1.1",
+            connect_router: [0,1,2,3,4,5,6],
+            // cfg options for --cfg arguments (connect retry settings)
+            cfg: [
+                "connect/timeout_ms:-2",
+                // 'connect/retry:{"period_init_ms":50,"period_max_ms":500,"period_increase_factor":1.2}'
+            ],
+        },
+        "2": {
+            ssh: "localhost",
+            excutable: "my_z_pub",
+            tap_br_name: "remote",
+            mode: "client",
+            zid: {
+                set: true,
+                value: "55eee231e11911fb3c02b3f182b2c664"
+            },
+            enabled_multicast_scounting: true,
+            listen_ip: "8.0.1.5",
+            default_route: "8.0.1.1",
+            connect_router: [5],
+            // cfg options for --cfg arguments (connect retry settings)
+            cfg: [
+                "connect/timeout_ms:-1",
+                // 'connect/retry:{"period_init_ms":50,"period_max_ms":500,"period_increase_factor":1.2}'
+            ],
+        },
+    }
+}

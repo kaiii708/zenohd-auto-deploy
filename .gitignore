@@ -12,6 +12,9 @@ venv/
 # Logs
 *.log
 
+# Per-branch build logs written by build_experiments.sh
+logs/
+
 # Ignore all experiment data except the .gitignore placeholder
 experiment_data/*
 !experiment_data/.gitignore

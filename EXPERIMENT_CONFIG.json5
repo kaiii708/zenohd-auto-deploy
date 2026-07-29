@@ -1,6 +1,11 @@
 {
+    // Location of the ns-3 checkout. ns-3 is a large external dependency
+    // (~1.5 GB) and is deliberately NOT vendored as a submodule -- install it
+    // separately and point this at it. "~" is expanded.
+    "ns3_dir": "~/dev/ns-3-dev",
+
     // Number of experiment rounds to run
-    "rounds": 10,
+    "rounds": 2,
 
     // Max seconds to wait for launch_nodes.py's readiness marker before
     // aborting the round (actual wait is usually much shorter — ns-3
@@ -28,7 +33,7 @@
         "simTime": 60,
 
         // Output directory (relative to ~/dev/ns-3-dev)
-        "experimentDir": "test",
+        "experimentDir": "script-test",
 
         // Cell load / background traffic
         // "numBgUes": 1,

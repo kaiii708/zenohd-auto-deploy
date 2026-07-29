@@ -65,11 +65,19 @@ def _build_ns3_args(ns3_config: dict) -> str:
     return ' '.join(parts)
 
 
-def run_round(round_num: int, config: dict) -> bool:
+def run_round(round_num: int, config: dict, network_config: str = None) -> bool:
     global _launch_proc, _ns3_proc
 
+    # Forwarded to launch_nodes.py so both the cleanup and the launch act on the
+    # same arm. Omitted entirely when unset, letting launch_nodes.py apply its
+    # own default rather than duplicating that default here.
+    net_args = ['-n', network_config] if network_config else []
+
     ns3_config = config['ns3']
-    ns3_dir = config.get('ns3_dir', NS3_DIR)
+    # expanduser matters here: NS3_DIR is already expanded, but a value coming
+    # from the config file is not, so a literal "~/dev/ns-3-dev" would be passed
+    # to subprocess as cwd and fail with ENOENT.
+    ns3_dir = os.path.expanduser(config.get('ns3_dir', NS3_DIR))
     launch_wait = config.get('launch_wait', 12)
     sim_time = ns3_config['simTime']
     auto_terminate = int(sim_time) + 60
@@ -77,11 +85,11 @@ def run_round(round_num: int, config: dict) -> bool:
     print(f"\n{'='*50}")
     print(f"Round {round_num}: cleanup")
     print(f"{'='*50}")
-    subprocess.run([sys.executable, LAUNCH_SCRIPT, '-c'], cwd=SCRIPT_DIR, check=True)
+    subprocess.run([sys.executable, LAUNCH_SCRIPT, '-c'] + net_args, cwd=SCRIPT_DIR, check=True)
 
     print(f"\nRound {round_num}: launching nodes (auto-terminate in {auto_terminate}s)...")
     _launch_proc = subprocess.Popen(
-        [sys.executable, LAUNCH_SCRIPT, '-t', str(auto_terminate)],
+        [sys.executable, LAUNCH_SCRIPT, '-t', str(auto_terminate)] + net_args,
         cwd=SCRIPT_DIR,
     )
 
@@ -122,6 +130,12 @@ def main():
         help='Path to experiment config file (default: EXPERIMENT_CONFIG.json5)',
     )
     parser.add_argument(
+        '-n', '--network-config', metavar='PATH', default=None,
+        help='Network config selecting the experiment arm, e.g. '
+             'configs/pre-subscribe.json5 (default: launch_nodes.py picks '
+             'NETWORK_CONFIG.json5)',
+    )
+    parser.add_argument(
         '--rounds', '--round', type=int, default=None,
         help='Override number of rounds from config',
     )
@@ -145,7 +159,7 @@ def main():
     print(f"  simTime={config['ns3']['simTime']}s, launch_wait={config.get('launch_wait', 12)}s")
 
     for i in range(1, rounds + 1):
-        success = run_round(i, config)
+        success = run_round(i, config, args.network_config)
         if not success:
             print(f"Round {i} failed — aborting.")
             sys.exit(1)

@@ -8,6 +8,24 @@ import json5
 import time
 from datetime import datetime
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def resolve_path(path):
+    """Resolve a config path against the script directory rather than the cwd.
+
+    Config files use paths relative to the repo root (e.g.
+    "zenoh/target/<branch>/x86_64-unknown-linux-musl/release") so that a fresh
+    clone works on any machine. os.path.abspath() would resolve those against
+    whatever directory the caller happened to be in, silently producing a wrong
+    mount path; anchoring to SCRIPT_DIR makes the result identical whether this
+    script is run directly or spawned by run_experiment.py.
+    """
+    if not path:
+        return path
+    return os.path.normpath(os.path.join(SCRIPT_DIR, os.path.expanduser(path)))
+
+
 def cleanup():
     # Cleanup clients first
     if 'client_list' in globals() and client_list:
@@ -130,10 +148,10 @@ class Router():
         if self.docker:
             volume_arg = ""
             if self.volume:
-                host_path = os.path.abspath(self.volume)
+                host_path = resolve_path(self.volume)
                 volume_arg = f"-v {host_path}:/zenoh"
             if self.ns3_handover_dir:
-                handover_path = os.path.abspath(self.ns3_handover_dir)
+                handover_path = resolve_path(self.ns3_handover_dir)
                 volume_arg += f" -v {handover_path}:/mnt"
 
             docker_run_cmd = f"docker run --cpuset-cpus='11-19' --init --name {self.session_name} --network none --rm {volume_arg}"
@@ -291,10 +309,10 @@ class Client():
         # Build volume argument
         volume_arg = ""
         if self.volume:
-            host_path = os.path.abspath(self.volume)
+            host_path = resolve_path(self.volume)
             volume_arg = f"-v {host_path}:/zenoh"
         if self.ns3_handover_dir:
-            handover_path = os.path.abspath(self.ns3_handover_dir)
+            handover_path = resolve_path(self.ns3_handover_dir)
             volume_arg += f" -v {handover_path}:/mnt"
 
         # Build the docker command - using --network none like Router
@@ -446,6 +464,10 @@ if __name__ == "__main__":
                         help='Only run cleanup for all nodes without launching them')
     parser.add_argument('-t', '--time', type=float, default=None, metavar='SECONDS',
                         help='Automatically terminate all nodes after this many seconds')
+    parser.add_argument('-n', '--network-config', metavar='PATH',
+                        default=os.path.join(SCRIPT_DIR, 'NETWORK_CONFIG.json5'),
+                        help='Path to the network config selecting the experiment arm '
+                             '(default: NETWORK_CONFIG.json5; see configs/<branch>.json5)')
     args = parser.parse_args()
 
     # Create our own process group so killpg() in signal handler only affects
@@ -456,7 +478,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Load configuration from the JSON5 file
-    with open('NETWORK_CONFIG.json5', 'r') as config_file:
+    with open(args.network_config, 'r') as config_file:
         network_config = json5.load(config_file)
     experiment_name = network_config.get('experiment')
     image_config = network_config.get('docker_image')

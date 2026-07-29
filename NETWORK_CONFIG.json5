@@ -1,11 +1,14 @@
 {
-    experiment: "72",
+    // experiment: "presub/ps_overhead_evaluation/u-corner",
+    experiment: "script-test",
     docker_image: {
         tag: "kaiii708/zenoh:volume_no_trace",
         clean_first: false,
     },
 
-    volume: "/home/vivian/dev/zenoh/target/x86_64-unknown-linux-musl/release",
+    // volume: "/home/vivian/dev/zenoh/target/with_buffer/x86_64-unknown-linux-musl/release",
+    volume: "/home/vivian/dev/zenoh/target/ps_presub_overhead_eval/x86_64-unknown-linux-musl/release",
+
     ns3_handover_dir: "/tmp/ns3_handover",
     user_name: "yuv",
     routers: {
@@ -21,6 +24,7 @@
             default_route: "10.1.1.1",
             cfg: [
                 "connect/timeout_ms:-2",
+                "transport/link/tx/batching/enabled:false",
             ],
             connect: [1,3,4,6],
         },
@@ -36,6 +40,7 @@
             default_route: "10.2.1.1",
             cfg: [
                 "connect/timeout_ms:-2",
+                "transport/link/tx/batching/enabled:false",
             ],
             connect: [2],
         },
@@ -51,6 +56,7 @@
             default_route: "10.3.1.1",
             cfg: [
                 "connect/timeout_ms:-2",
+                "transport/link/tx/batching/enabled:false",
             ],
             connect: [3],
         },
@@ -66,6 +72,7 @@
             default_route: "10.4.1.1",
             cfg: [
                 "connect/timeout_ms:-2",
+                "transport/link/tx/batching/enabled:false",
             ],
             connect: [],
         },
@@ -81,6 +88,7 @@
             default_route: "10.5.1.1",
             cfg: [
                 "connect/timeout_ms:-2",
+                "transport/link/tx/batching/enabled:false",
             ],
             connect: [5],
         },
@@ -96,6 +104,7 @@
             default_route: "10.6.1.1",
             cfg: [
                 "connect/timeout_ms:-2",
+                "transport/link/tx/batching/enabled:false",
             ],
             connect: [6],
         },
@@ -111,6 +120,7 @@
             default_route: "10.7.1.1",
             cfg: [
                 "connect/timeout_ms:-2",
+                "transport/link/tx/batching/enabled:false",
             ],
             connect: [],
         },

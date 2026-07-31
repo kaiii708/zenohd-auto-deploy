@@ -53,6 +53,17 @@ The publisher (`my_z_pub`) is the same in every arm.
 ns-3 is not a submodule — it is large, and `contrib/nr` is an active multi-branch workspace. It is
 pinned by **verification** instead: `check_ns3.sh` confirms the checkout is in the expected state.
 
+### Passwordless sudo
+
+`launch_nodes.py` creates TAP devices, bridges, veth pairs and netns entries from background
+subprocesses that cannot answer a password prompt. Install the drop-in from this repo's
+`zenoh-experiment` template:
+
+```bash
+sudo visudo -f /etc/sudoers.d/zenoh-experiment     # paste the template, edit the username
+sudo -n -l                                          # confirm the NOPASSWD rules are listed
+```
+
 ### Installing ns-3 + nr
 
 Two specific commits are required: an ns-3 fork whose only change to `ns-3.44` lets the `ns3`

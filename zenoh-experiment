@@ -1,0 +1,39 @@
+# Template for /etc/sudoers.d/zenoh-experiment
+#
+# Install with:   sudo visudo -f /etc/sudoers.d/zenoh-experiment
+# Verify with:    sudo -n -l
+#
+# Replace <username> on the last line with the account that runs the experiment
+# (the output of `id -un`). Everything else can be used as-is.
+Cmnd_Alias ZENOH_TUNTAP  = /usr/sbin/ip tuntap add tap_* mode tap
+Cmnd_Alias ZENOH_LINKSET = /usr/sbin/ip link set tap_* promisc on up, \
+                            /usr/sbin/ip link set br_* up, \
+                            /usr/sbin/ip link set tap_* master br_*, \
+                            /usr/sbin/ip link set internal_* master br_*, \
+                            /usr/sbin/ip link set int_* master br_*, \
+                            /usr/sbin/ip link set internal_* up, \
+                            /usr/sbin/ip link set int_* up, \
+                            /usr/sbin/ip link set external_* netns *, \
+                            /usr/sbin/ip link set ext_* netns *
+Cmnd_Alias ZENOH_LINKADD = /usr/sbin/ip link add name br_* type bridge, \
+                            /usr/sbin/ip link add internal_* type veth peer name external_*, \
+                            /usr/sbin/ip link add int_* type veth peer name ext_*
+Cmnd_Alias ZENOH_LINKDEL = /usr/sbin/ip link del internal_*, \
+                            /usr/sbin/ip link del int_*, \
+                            /usr/sbin/ip link del br_*, \
+                            /usr/sbin/ip link del tap_*
+Cmnd_Alias ZENOH_NETNS   = /usr/sbin/ip netns exec * ip link set dev external_* name eth0, \
+                            /usr/sbin/ip netns exec * ip link set dev ext_* name eth0, \
+                            /usr/sbin/ip netns exec * ip link set eth0 up, \
+                            /usr/sbin/ip netns exec * ip addr add * dev eth0, \
+                            /usr/sbin/ip netns exec * ip route add default via *
+Cmnd_Alias ZENOH_IPTABLES = /usr/sbin/iptables -I FORWARD -m physdev --physdev-is-bridged -i br_* -j ACCEPT, \
+                             /usr/sbin/iptables -D FORWARD -m physdev --physdev-is-bridged -i br_* -j ACCEPT
+Cmnd_Alias ZENOH_NETNS_SETUP = /usr/bin/mkdir -p /var/run/netns, \
+                                /usr/bin/ln -sf /proc/*/ns/net /var/run/netns/*
+Cmnd_Alias ZENOH_NS3 = /usr/bin/nice -n -10 taskset -c 0-10 ./ns3 run *
+Cmnd_Alias ZENOH_KILL = /usr/bin/kill -INT -- -*, \
+                         /usr/bin/kill -KILL -- -*
+
+<username> ALL=(root) NOPASSWD: ZENOH_TUNTAP, ZENOH_LINKSET, ZENOH_LINKADD, ZENOH_LINKDEL, \
+    ZENOH_NETNS, ZENOH_IPTABLES, ZENOH_NETNS_SETUP, ZENOH_NS3, ZENOH_KILL

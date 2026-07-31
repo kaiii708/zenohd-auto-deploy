@@ -10,6 +10,17 @@ from datetime import datetime
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Prefix for every privileged command. "-n" makes sudo fail immediately rather
+# than block on a password prompt that a non-interactive subprocess can never
+# answer -- the experiment expects the NOPASSWD drop-in (see the zenoh-experiment
+# template and the README).
+#
+# Override without editing this file:
+#   ZENOH_SUDO="sudo"          allow prompting
+#   ZENOH_SUDO=""              already running as root
+#   ZENOH_SUDO="echo sudo -n"  dry run: print the commands instead of running them
+SUDO = os.environ.get("ZENOH_SUDO", "sudo -n")
+
 
 def resolve_path(path):
     """Resolve a config path against the script directory rather than the cwd.
@@ -123,19 +134,19 @@ class Router():
     def cleanup_netns_veth(self):
         name = f"edge{self.id}"
         print(f"Cleaning up for Router {self.id}...\n")
-        self.run_shell_command(f"sudo iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true")
+        self.run_shell_command(f"{SUDO} iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true")
 
-        self.run_shell_command(f"sudo ip link del internal_{name} 2>/dev/null || true")
-        self.run_shell_command(f"sudo ip link del br_{name} 2>/dev/null || true")
-        self.run_shell_command(f"sudo ip link del tap_{name} 2>/dev/null || true")
-        # self.run_shell_command(f"sudo ip link del internal_{name} 2>/dev/null || true")
-        # self.run_shell_command(f"sudo ip link del external_{name} 2>/dev/null || true")
+        self.run_shell_command(f"{SUDO} ip link del internal_{name} 2>/dev/null || true")
+        self.run_shell_command(f"{SUDO} ip link del br_{name} 2>/dev/null || true")
+        self.run_shell_command(f"{SUDO} ip link del tap_{name} 2>/dev/null || true")
+        # self.run_shell_command(f"{SUDO} ip link del internal_{name} 2>/dev/null || true")
+        # self.run_shell_command(f"{SUDO} ip link del external_{name} 2>/dev/null || true")
 
     # def cleanup(self):
 
     #     for idx in range(len(self.listen_endpoints)):
     #         self.cleanup_netns_veth(idx)
-    #     self.run_shell_command("sudo rm -f /var/run/netns/* 2>/dev/null || true")
+    #     self.run_shell_command(f"{SUDO} rm -f /var/run/netns/* 2>/dev/null || true")
     #     # self.run_shell_command(f"docker container rm -f {self.session_name} 2>/dev/null || true")
     #     self.run_shell_command(f"tmux kill-session -t {self.session_name} 2>/dev/null || true")
 
@@ -196,31 +207,31 @@ class Router():
     def setup_netns_veth(self):
         addr = self.listen_endpoint.split('/')[1].split(':')[0]
         name = f"edge{self.id}"
-        self.run_shell_command(f"sudo ip tuntap add tap_{name} mode tap")
-        self.run_shell_command(f"sudo ip link set tap_{name} promisc on up")
+        self.run_shell_command(f"{SUDO} ip tuntap add tap_{name} mode tap")
+        self.run_shell_command(f"{SUDO} ip link set tap_{name} promisc on up")
 
-        self.run_shell_command(f"sudo ip link add name br_{name} type bridge")
-        self.run_shell_command(f"sudo ip link set br_{name} up")
-        self.run_shell_command(f"sudo ip link set tap_{name} master br_{name}")
+        self.run_shell_command(f"{SUDO} ip link add name br_{name} type bridge")
+        self.run_shell_command(f"{SUDO} ip link set br_{name} up")
+        self.run_shell_command(f"{SUDO} ip link set tap_{name} master br_{name}")
 
-        self.run_shell_command(f"sudo iptables -I FORWARD -m physdev --physdev-is-bridged -i br_{name}  -j ACCEPT")
+        self.run_shell_command(f"{SUDO} iptables -I FORWARD -m physdev --physdev-is-bridged -i br_{name}  -j ACCEPT")
 
         pid = subprocess.check_output(f"docker inspect --format '{{{{ .State.Pid }}}}' {self.session_name}", shell=True).decode().strip()
 
-        self.run_shell_command("sudo mkdir -p /var/run/netns")
-        self.run_shell_command(f"sudo ln -sf /proc/{pid}/ns/net  /var/run/netns/{pid}")
+        self.run_shell_command(f"{SUDO} mkdir -p /var/run/netns")
+        self.run_shell_command(f"{SUDO} ln -sf /proc/{pid}/ns/net  /var/run/netns/{pid}")
 
-        self.run_shell_command(f"sudo ip link add internal_{name}  type veth peer name external_{name}")
-        self.run_shell_command(f"sudo ip link set internal_{name}  master br_{name}")
-        self.run_shell_command(f"sudo ip link set internal_{name}  up")
-        self.run_shell_command(f"sudo ip link set external_{name}  netns {pid}")
+        self.run_shell_command(f"{SUDO} ip link add internal_{name}  type veth peer name external_{name}")
+        self.run_shell_command(f"{SUDO} ip link set internal_{name}  master br_{name}")
+        self.run_shell_command(f"{SUDO} ip link set internal_{name}  up")
+        self.run_shell_command(f"{SUDO} ip link set external_{name}  netns {pid}")
 
-        self.run_shell_command(f"sudo ip netns exec {pid}  ip link set dev external_{name} name eth0")
-        self.run_shell_command(f"sudo ip netns exec {pid}  ip link set eth0 up")
-        self.run_shell_command(f"sudo ip netns exec {pid}  ip addr add {addr}/24 dev eth0")
+        self.run_shell_command(f"{SUDO} ip netns exec {pid}  ip link set dev external_{name} name eth0")
+        self.run_shell_command(f"{SUDO} ip netns exec {pid}  ip link set eth0 up")
+        self.run_shell_command(f"{SUDO} ip netns exec {pid}  ip addr add {addr}/24 dev eth0")
 
         if self.default_route:
-            self.run_shell_command(f"sudo ip netns exec {pid} ip route add default via {self.default_route}")
+            self.run_shell_command(f"{SUDO} ip netns exec {pid} ip route add default via {self.default_route}")
 
     def check_if_error_while_launch(self):
         if self.is_localhost:
@@ -294,11 +305,11 @@ class Client():
         name = self.tap_br_name
         veth_name = f"c{self.id}"
         print(f"Cleaning up for Client {self.id} ({self.executable})...\n")
-        self.run_shell_command(f"sudo iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true")
+        self.run_shell_command(f"{SUDO} iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true")
 
-        self.run_shell_command(f"sudo ip link del int_{veth_name} 2>/dev/null || true")
-        self.run_shell_command(f"sudo ip link del br_{name} 2>/dev/null || true")
-        self.run_shell_command(f"sudo ip link del tap_{name} 2>/dev/null || true")
+        self.run_shell_command(f"{SUDO} ip link del int_{veth_name} 2>/dev/null || true")
+        self.run_shell_command(f"{SUDO} ip link del br_{name} 2>/dev/null || true")
+        self.run_shell_command(f"{SUDO} ip link del tap_{name} 2>/dev/null || true")
 
     def launch_client(self):
         print(f"Launching client {self.executable} for Client {self.id}...\n")
@@ -365,31 +376,31 @@ class Client():
         # Use shorter names for veth pairs (Linux limit is 15 chars)
         # Use client id for veth to keep it short: int_c1, ext_c1
         veth_name = f"c{self.id}"
-        self.run_shell_command(f"sudo ip tuntap add tap_{name} mode tap")
-        self.run_shell_command(f"sudo ip link set tap_{name} promisc on up")
+        self.run_shell_command(f"{SUDO} ip tuntap add tap_{name} mode tap")
+        self.run_shell_command(f"{SUDO} ip link set tap_{name} promisc on up")
 
-        self.run_shell_command(f"sudo ip link add name br_{name} type bridge")
-        self.run_shell_command(f"sudo ip link set br_{name} up")
-        self.run_shell_command(f"sudo ip link set tap_{name} master br_{name}")
+        self.run_shell_command(f"{SUDO} ip link add name br_{name} type bridge")
+        self.run_shell_command(f"{SUDO} ip link set br_{name} up")
+        self.run_shell_command(f"{SUDO} ip link set tap_{name} master br_{name}")
 
-        self.run_shell_command(f"sudo iptables -I FORWARD -m physdev --physdev-is-bridged -i br_{name}  -j ACCEPT")
+        self.run_shell_command(f"{SUDO} iptables -I FORWARD -m physdev --physdev-is-bridged -i br_{name}  -j ACCEPT")
 
         pid = subprocess.check_output(f"docker inspect --format '{{{{ .State.Pid }}}}' {self.session_name}", shell=True).decode().strip()
 
-        self.run_shell_command("sudo mkdir -p /var/run/netns")
-        self.run_shell_command(f"sudo ln -sf /proc/{pid}/ns/net  /var/run/netns/{pid}")
+        self.run_shell_command(f"{SUDO} mkdir -p /var/run/netns")
+        self.run_shell_command(f"{SUDO} ln -sf /proc/{pid}/ns/net  /var/run/netns/{pid}")
 
-        self.run_shell_command(f"sudo ip link add int_{veth_name} type veth peer name ext_{veth_name}")
-        self.run_shell_command(f"sudo ip link set int_{veth_name} master br_{name}")
-        self.run_shell_command(f"sudo ip link set int_{veth_name} up")
-        self.run_shell_command(f"sudo ip link set ext_{veth_name} netns {pid}")
+        self.run_shell_command(f"{SUDO} ip link add int_{veth_name} type veth peer name ext_{veth_name}")
+        self.run_shell_command(f"{SUDO} ip link set int_{veth_name} master br_{name}")
+        self.run_shell_command(f"{SUDO} ip link set int_{veth_name} up")
+        self.run_shell_command(f"{SUDO} ip link set ext_{veth_name} netns {pid}")
 
-        self.run_shell_command(f"sudo ip netns exec {pid} ip link set dev ext_{veth_name} name eth0")
-        self.run_shell_command(f"sudo ip netns exec {pid} ip link set eth0 up")
-        self.run_shell_command(f"sudo ip netns exec {pid} ip addr add {addr}/24 dev eth0")
+        self.run_shell_command(f"{SUDO} ip netns exec {pid} ip link set dev ext_{veth_name} name eth0")
+        self.run_shell_command(f"{SUDO} ip netns exec {pid} ip link set eth0 up")
+        self.run_shell_command(f"{SUDO} ip netns exec {pid} ip addr add {addr}/24 dev eth0")
 
         if self.default_route:
-            self.run_shell_command(f"sudo ip netns exec {pid} ip route add default via {self.default_route}")
+            self.run_shell_command(f"{SUDO} ip netns exec {pid} ip route add default via {self.default_route}")
 
 
 def cleanup_only():
@@ -417,10 +428,10 @@ def cleanup_only():
                 subprocess.run(f"ssh {user_name}@{launch_ip} \"{kill_session_command}\"", shell=True)
 
             # Cleanup network resources
-            subprocess.run(f"sudo iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true", shell=True)
-            subprocess.run(f"sudo ip link del int_{veth_name} 2>/dev/null || true", shell=True)
-            subprocess.run(f"sudo ip link del br_{name} 2>/dev/null || true", shell=True)
-            subprocess.run(f"sudo ip link del tap_{name} 2>/dev/null || true", shell=True)
+            subprocess.run(f"{SUDO} iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true", shell=True)
+            subprocess.run(f"{SUDO} ip link del int_{veth_name} 2>/dev/null || true", shell=True)
+            subprocess.run(f"{SUDO} ip link del br_{name} 2>/dev/null || true", shell=True)
+            subprocess.run(f"{SUDO} ip link del tap_{name} 2>/dev/null || true", shell=True)
 
             print(f"Cleanup complete for Client {client_id}\n")
         except Exception as e:
@@ -444,10 +455,10 @@ def cleanup_only():
                 subprocess.run(f"ssh {user_name}@{launch_ip} \"{kill_session_command}\"", shell=True)
 
             # Cleanup network resources
-            subprocess.run(f"sudo iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true", shell=True)
-            subprocess.run(f"sudo ip link del internal_{name} 2>/dev/null || true", shell=True)
-            subprocess.run(f"sudo ip link del br_{name} 2>/dev/null || true", shell=True)
-            subprocess.run(f"sudo ip link del tap_{name} 2>/dev/null || true", shell=True)
+            subprocess.run(f"{SUDO} iptables -D FORWARD -m physdev --physdev-is-bridged -i br_{name} -j ACCEPT 2>/dev/null || true", shell=True)
+            subprocess.run(f"{SUDO} ip link del internal_{name} 2>/dev/null || true", shell=True)
+            subprocess.run(f"{SUDO} ip link del br_{name} 2>/dev/null || true", shell=True)
+            subprocess.run(f"{SUDO} ip link del tap_{name} 2>/dev/null || true", shell=True)
 
             print(f"Cleanup complete for Router {router_id}\n")
         except Exception as e:

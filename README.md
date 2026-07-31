@@ -64,6 +64,16 @@ sudo visudo -f /etc/sudoers.d/zenoh-experiment     # paste the template, edit th
 sudo -n -l                                          # confirm the NOPASSWD rules are listed
 ```
 
+All privileged calls run as `sudo -n`, so a missing or incomplete drop-in fails immediately instead
+of hanging. Override the prefix without editing any file:
+
+| `ZENOH_SUDO` | Effect |
+|---|---|
+| unset | `sudo -n` — the default |
+| `sudo` | Allow interactive prompting |
+| *(empty)* | Already running as root |
+| `echo sudo -n` | Dry run — print every privileged command instead of running it |
+
 ### Installing ns-3 + nr
 
 Two specific commits are required: an ns-3 fork whose only change to `ns-3.44` lets the `ns3`

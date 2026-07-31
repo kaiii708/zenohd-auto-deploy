@@ -7,7 +7,7 @@ Per-round steps:
   2. Start launch_nodes.py -t {simTime+60} in the background (the timer is
      just a fallback — see step 5)
   3. Poll for launch_nodes.py's readiness marker (containers/TAP devices up)
-  4. Run: sudo nice -n -10 taskset -c 0-10 ./ns3 run "nr-mec-3gpp-calibration ..."
+  4. Run: sudo -n nice -n -10 taskset -c 0-10 ./ns3 run "nr-mec-3gpp-calibration ..."
   5. Wait for ns-3 to finish, then signal launch_nodes.py to clean up
   6. Pause round_pause seconds, then start the next round
 """
@@ -23,6 +23,11 @@ import json5
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LAUNCH_SCRIPT = os.path.join(SCRIPT_DIR, 'launch_nodes.py')
 NS3_DIR = os.path.expanduser('~/dev/ns-3-dev')
+# Prefix for the privileged ns-3 invocation. "-n" makes sudo fail immediately
+# rather than block on a password prompt -- which would otherwise hang the round
+# after the containers and TAP devices are already up. Override with ZENOH_SUDO,
+# same as launch_nodes.py.
+SUDO = os.environ.get("ZENOH_SUDO", "sudo -n")
 READY_MARKER = '/tmp/ns3_handover/nodes_ready'
 
 # Kept at module level so the signal handler can reach them
@@ -102,7 +107,7 @@ def run_round(round_num: int, config: dict, network_config: str = None) -> bool:
         return False
 
     ns3_args = _build_ns3_args(ns3_config)
-    ns3_cmd = f'sudo nice -n -10 taskset -c 0-10 ./ns3 run "nr-mec-3gpp-calibration {ns3_args}"'
+    ns3_cmd = f'{SUDO} nice -n -10 taskset -c 0-10 ./ns3 run "nr-mec-3gpp-calibration {ns3_args}"'
     print(f"\nRound {round_num}: starting ns-3")
     print(f"  {ns3_cmd}\n")
     _ns3_proc = subprocess.Popen(ns3_cmd, shell=True, cwd=ns3_dir)

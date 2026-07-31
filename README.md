@@ -11,6 +11,7 @@ zenohd-auto-deploy/
 ├── zenoh/                     git submodule -> kaiii708/zenoh (the six experiment branches)
 ├── build_experiments.sh       cross-builds each branch into zenoh/target/<branch>/
 ├── check_configs.sh           verifies configs match built binaries (run before experiments)
+├── check_ns3.sh               verifies the ns-3 checkout: pins, sudo patch, optimized build
 ├── run_experiment.py          orchestrates N rounds of ns-3 + Zenoh
 ├── launch_nodes.py            brings up routers/clients in netns with TAP devices
 ├── configs/<branch>.json5     one network config per experiment arm
@@ -44,12 +45,45 @@ The publisher (`my_z_pub`) is the same in every arm.
 |---|---|
 | Docker | Runs both the `cross` build containers and the router containers |
 | [`cross`](https://github.com/cross-rs/cross) | `cargo install cross` — cross-compiles to `x86_64-unknown-linux-musl` |
-| ns-3 with `nr-mec-3gpp-calibration` | ~1.5 GB, installed separately; path set via `ns3_dir` |
+| ns-3 + the `nr` module | ~1.5 GB, installed separately at pinned commits — see below |
 | Python ≥ 3.8 + `json5` | `pip install json5` |
-| `tmux`, `rsync`, `sudo` | Session management, data transfer, netns/TAP setup |
+| `tmux`, `rsync` | Session management, data transfer |
+| Passwordless sudo drop-in | Required — see below; netns/TAP setup runs unattended |
 
-ns-3 is deliberately **not** a submodule — it is large and independently maintained. Point
-`EXPERIMENT_CONFIG.json5`'s `ns3_dir` at your checkout (`~` is expanded).
+ns-3 is not a submodule — it is large, and `contrib/nr` is an active multi-branch workspace. It is
+pinned by **verification** instead: `check_ns3.sh` confirms the checkout is in the expected state.
+
+### Installing ns-3 + nr
+
+Two specific commits are required: an ns-3 fork whose only change to `ns-3.44` lets the `ns3`
+wrapper run under `sudo`, and the `nr` branch carrying the scenario.
+
+```bash
+git clone -b zenoh-experiment git@github.com:kaiii708/ns-3-dev.git
+git clone -b bg-ue-mac-contention git@github.com:kaiii708/nr.git ns-3-dev/contrib/nr
+cd ns-3-dev
+./ns3 configure -d optimized --enable-examples
+./ns3 build
+```
+
+**The `-d optimized` is required, not a preference.** A debug build carries assertions and no
+optimisation, so timing-sensitive results — convergence time, packet loss during handover — are not
+comparable with optimized-build numbers. The experiment will run happily against a debug build and
+produce quietly wrong figures, so `check_ns3.sh` treats a non-optimized profile as a failure.
+
+Confirm the scenario actually built:
+
+```bash
+./ns3 show targets | grep nr        # nr-mec-3gpp-calibration must appear
+```
+
+| Component | Pin | Why |
+|---|---|---|
+| `kaiii708/ns-3-dev` | branch `zenoh-experiment` = tag `ns-3.44` + `9175b41fb` | That commit disables `refuse_run_as_root()`; without it `sudo ./ns3 run` aborts |
+| `kaiii708/nr` | `b1bedf07` (`bg-ue-mac-contention`) | Provides `examples/nr-mec-3gpp-calibration.cc`, the scenario every round runs |
+
+Then point `EXPERIMENT_CONFIG.json5`'s `ns3_dir` at the checkout (`~` is expanded) and run
+`./check_ns3.sh`.
 
 ---
 
@@ -124,16 +158,30 @@ musl release builds are memory-hungry, so parallelism gains little here.
 ## 2. Verify before running
 
 ```bash
-./check_configs.sh
+./check_configs.sh     # zenoh side: configs vs built binaries
+./check_ns3.sh         # ns-3 side: pinned commits, sudo patch, optimized build
 ```
 
-Confirms, for every config: the executable matches the arm its branch is supposed to run, the volume
-points at that branch's build directory, and all three binaries exist.
+Both guard silent failures — the kind that complete successfully and produce plausible-looking
+numbers that are simply wrong. **Run them after building and before trusting any results.**
 
-This guards a specific silent failure. `volume` and `excutable` are independent fields, so a config
-can name the pre-subscription build directory while launching the baseline subscriber. Nothing at
-runtime notices — the experiment completes and produces plausible-looking numbers for the wrong arm.
-**Run this after building and before trusting any results.**
+`check_configs.sh` confirms, for every config, that the executable matches the arm its branch is
+supposed to run, the volume points at that branch's build directory, and all three binaries exist.
+`volume` and `excutable` are independent fields, so a config can name the pre-subscription build
+directory while launching the baseline subscriber, and nothing at runtime notices.
+
+`check_ns3.sh` confirms the ns-3 checkout is what the experiment expects:
+
+| Check | Failure means |
+|---|---|
+| `ns3` root refusal is patched out | `sudo ./ns3 run` will abort immediately |
+| `contrib/nr` at `b1bedf07` | Running a different scenario variant than intended |
+| Scenario source present | Cannot build `nr-mec-3gpp-calibration` |
+| Build profile is `optimized` | Timing results not comparable with previous runs |
+| Scenario target built | Configured without `--enable-examples` |
+| ns-3 on `zenoh-experiment` | Warning only — a rebase changes the SHA legitimately |
+
+Point it at another checkout with `./check_ns3.sh --dir /path/to/ns-3-dev`.
 
 ---
 
@@ -212,6 +260,10 @@ binaries. Leave it unset for real runs.
 | `check_configs.sh` reports `BUILT: NO` | That arm is not built: `./build_experiments.sh <branch>` |
 | `check_configs.sh` reports `WRONG` | A config's `excutable` disagrees with its branch — fix the config |
 | Experiment runs but numbers look like the other arm | Ran with the wrong `-n`; `check_configs.sh` plus matching names prevent this |
+| ns-3 aborts with "Refusing to run as root" | Wrong ns-3 branch — use `zenoh-experiment` |
+| `check_ns3.sh` reports a wrong `contrib/nr` commit | `git -C <ns3_dir>/contrib/nr checkout bg-ue-mac-contention` |
+| `check_ns3.sh` reports a non-optimized profile | `./ns3 configure -d optimized --enable-examples && ./ns3 build` |
+| `nr-mec-3gpp-calibration` missing from `./ns3 show targets` | Configured without `--enable-examples` |
 
 ---
 

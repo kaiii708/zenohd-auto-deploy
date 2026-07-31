@@ -1,7 +1,7 @@
 {
-    // Location of the ns-3 checkout. ns-3 is a large external dependency
-    // (~1.5 GB) and is deliberately NOT vendored as a submodule -- install it
-    // separately and point this at it. "~" is expanded.
+    // Location of the ns-3 checkout (~1.5 GB, installed separately -- see the
+    // README). Must be the zenoh-experiment branch with contrib/nr at b1bedf07,
+    // built with -d optimized. Verify with ./check_ns3.sh. "~" is expanded.
     "ns3_dir": "~/dev/ns-3-dev",
 
     // Number of experiment rounds to run

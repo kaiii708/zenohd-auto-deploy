@@ -83,6 +83,17 @@ def run_round(round_num: int, config: dict, network_config: str = None) -> bool:
     # from the config file is not, so a literal "~/dev/ns-3-dev" would be passed
     # to subprocess as cwd and fail with ENOENT.
     ns3_dir = os.path.expanduser(config.get('ns3_dir', NS3_DIR))
+
+    # Forwarded to launch_nodes.py, which mounts the zenoh build output. When
+    # "zenoh_dir" is absent we leave the environment alone, so launch_nodes.py
+    # resolves the volume against the repo (the in-repo submodule) exactly as
+    # before. When present it overrides the checkout location (see resolve_path
+    # in launch_nodes.py); "~" is expanded there.
+    launch_env = os.environ.copy()
+    zenoh_dir = config.get('zenoh_dir')
+    if zenoh_dir:
+        launch_env['ZENOH_DIR'] = zenoh_dir
+
     launch_wait = config.get('launch_wait', 12)
     sim_time = ns3_config['simTime']
     auto_terminate = int(sim_time) + 60
@@ -90,12 +101,13 @@ def run_round(round_num: int, config: dict, network_config: str = None) -> bool:
     print(f"\n{'='*50}")
     print(f"Round {round_num}: cleanup")
     print(f"{'='*50}")
-    subprocess.run([sys.executable, LAUNCH_SCRIPT, '-c'] + net_args, cwd=SCRIPT_DIR, check=True)
+    subprocess.run([sys.executable, LAUNCH_SCRIPT, '-c'] + net_args, cwd=SCRIPT_DIR, env=launch_env, check=True)
 
     print(f"\nRound {round_num}: launching nodes (auto-terminate in {auto_terminate}s)...")
     _launch_proc = subprocess.Popen(
         [sys.executable, LAUNCH_SCRIPT, '-t', str(auto_terminate)] + net_args,
         cwd=SCRIPT_DIR,
+        env=launch_env,
     )
 
     print(f"Round {round_num}: waiting for containers/TAP devices to be ready (max {launch_wait}s)...")

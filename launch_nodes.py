@@ -21,6 +21,15 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 #   ZENOH_SUDO="echo sudo -n"  dry run: print the commands instead of running them
 SUDO = os.environ.get("ZENOH_SUDO", "sudo -n")
 
+# Optional override for the location of the zenoh checkout. Config files point
+# the mount at the repo-relative submodule path "zenoh/target/.../release"; when
+# ZENOH_DIR is set, its leading "zenoh" component is replaced so a checkout that
+# lives outside the repo (e.g. a maintainer's separate clone) is mounted instead.
+# run_experiment.py forwards EXPERIMENT_CONFIG.json5's "zenoh_dir" here; it can
+# also be set by hand for a standalone launch_nodes.py run. "~" is expanded.
+# Unset -> paths resolve against SCRIPT_DIR exactly as before.
+ZENOH_DIR = os.environ.get("ZENOH_DIR")
+
 
 def resolve_path(path):
     """Resolve a config path against the script directory rather than the cwd.
@@ -31,10 +40,20 @@ def resolve_path(path):
     whatever directory the caller happened to be in, silently producing a wrong
     mount path; anchoring to SCRIPT_DIR makes the result identical whether this
     script is run directly or spawned by run_experiment.py.
+
+    When ZENOH_DIR is set and the path is repo-relative with a leading "zenoh"
+    component (the submodule dir), that component is swapped for ZENOH_DIR so the
+    build output of an out-of-repo checkout is mounted instead.
     """
     if not path:
         return path
-    return os.path.normpath(os.path.join(SCRIPT_DIR, os.path.expanduser(path)))
+    expanded = os.path.expanduser(path)
+    if ZENOH_DIR and not os.path.isabs(expanded):
+        parts = expanded.split(os.sep)
+        if parts and parts[0] == "zenoh":
+            base = os.path.expanduser(ZENOH_DIR)
+            return os.path.normpath(os.path.join(base, *parts[1:]))
+    return os.path.normpath(os.path.join(SCRIPT_DIR, expanded))
 
 
 def cleanup():

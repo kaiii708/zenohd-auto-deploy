@@ -4,6 +4,13 @@
     // built with -d optimized. Verify with ./check_ns3.sh. "~" is expanded.
     "ns3_dir": "~/dev/ns-3-dev",
 
+    // Optional override for the zenoh checkout location. By default the config
+    // mounts the in-repo submodule ("zenoh/target/.../release"). Uncomment this
+    // to point at a clone that lives outside the repo -- its leading "zenoh"
+    // component is swapped for this path. Omit the field entirely to keep the
+    // default (in-repo) behaviour. "~" is expanded.
+    // "zenoh_dir": "~/dev/zenoh",
+
     // Number of experiment rounds to run
     "rounds": 2,
 

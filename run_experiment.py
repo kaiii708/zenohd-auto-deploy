@@ -141,6 +141,13 @@ def main():
              'NETWORK_CONFIG.json5)',
     )
     parser.add_argument(
+        '-e', '--ns3-experiment-dir', metavar='DIR', default=None,
+        help='Override ns3.experimentDir — where ns-3 writes its output, '
+             'relative to ns3_dir. Distinct from the network config\'s '
+             '"experiment" field, which controls the Zenoh experiment_data/ '
+             'path (default: from the config file)',
+    )
+    parser.add_argument(
         '--rounds', '--round', type=int, default=None,
         help='Override number of rounds from config',
     )
@@ -148,6 +155,11 @@ def main():
 
     with open(args.config) as f:
         config = json5.load(f)
+
+    # Applied to the config dict rather than threaded through run_round, so it
+    # flows into _build_ns3_args like every other ns3 key.
+    if args.ns3_experiment_dir is not None:
+        config['ns3']['experimentDir'] = args.ns3_experiment_dir
 
     rounds = args.rounds if args.rounds is not None else config.get('rounds', 1)
     round_pause = config.get('round_pause', 5)
@@ -162,6 +174,7 @@ def main():
 
     print(f"Starting experiment: {rounds} round(s)")
     print(f"  simTime={config['ns3']['simTime']}s, launch_wait={config.get('launch_wait', 12)}s")
+    print(f"  ns-3 output: {config['ns3'].get('experimentDir', '(unset)')}")
 
     for i in range(1, rounds + 1):
         success = run_round(i, config, args.network_config)

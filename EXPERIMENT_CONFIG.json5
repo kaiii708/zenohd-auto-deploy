@@ -12,7 +12,7 @@
     // "zenoh_dir": "~/dev/zenoh",
 
     // Number of experiment rounds to run
-    "rounds": 2,
+    "rounds": 10,
 
     // Max seconds to wait for launch_nodes.py's readiness marker before
     // aborting the round (actual wait is usually much shorter — ns-3
@@ -40,7 +40,7 @@
         "simTime": 60,
 
         // Output directory (relative to ~/dev/ns-3-dev)
-        "experimentDir": "script-test",
+        "experimentDir": "latency/highway/presub",
 
         // Cell load / background traffic
         // "numBgUes": 1,

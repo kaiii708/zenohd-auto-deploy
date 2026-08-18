@@ -174,9 +174,10 @@ def main():
     parser.add_argument(
         '-e', '--ns3-experiment-dir', metavar='DIR', default=None,
         help='Override ns3.experimentDir — where ns-3 writes its output, '
-             'relative to ns3_dir. Distinct from the network config\'s '
-             '"experiment" field, which controls the Zenoh experiment_data/ '
-             'path (default: from the config file)',
+             'relative to ns3_dir. Forwarded to launch_nodes.py as the Zenoh '
+             'experiment_data/ path too when the network config\'s "experiment" '
+             'field is empty, so both mirror the same dir (default: from the '
+             'config file)',
     )
     parser.add_argument(
         '--rounds', '--round', type=int, default=None,

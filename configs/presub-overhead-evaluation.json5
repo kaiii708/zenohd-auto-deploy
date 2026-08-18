@@ -1,5 +1,5 @@
 {
-    experiment: "overhead/presub",
+    experiment: "",
     docker_image: {
         tag: "kaiii708/zenoh:volume_no_trace",
         clean_first: false,

@@ -94,6 +94,14 @@ def run_round(round_num: int, config: dict, network_config: str = None) -> bool:
     if zenoh_dir:
         launch_env['ZENOH_DIR'] = zenoh_dir
 
+    # Forwarded to launch_nodes.py, which uses it as the experiment name only
+    # when the network config's "experiment" field is empty -- so a single
+    # network config reused across settings mirrors each setting's ns-3 output
+    # dir in its zenoh experiment_data/ path.
+    experiment_dir = ns3_config.get('experimentDir')
+    if experiment_dir:
+        launch_env['ZENOH_EXPERIMENT_DIR'] = experiment_dir
+
     launch_wait = config.get('launch_wait', 12)
     sim_time = ns3_config['simTime']
     auto_terminate = int(sim_time) + 60

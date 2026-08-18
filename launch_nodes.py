@@ -30,6 +30,13 @@ SUDO = os.environ.get("ZENOH_SUDO", "sudo -n")
 # Unset -> paths resolve against SCRIPT_DIR exactly as before.
 ZENOH_DIR = os.environ.get("ZENOH_DIR")
 
+# Fallback experiment name, used only when the network config's "experiment"
+# field is empty. run_experiment.py forwards the current setting's ns3
+# "experimentDir" here so a single network config reused across settings writes
+# each setting's zenoh data to a folder mirroring the ns-3 output dir. When both
+# the config field and this env var are empty, experiment_name stays unset.
+ZENOH_EXPERIMENT_DIR = os.environ.get("ZENOH_EXPERIMENT_DIR")
+
 
 def resolve_path(path):
     """Resolve a config path against the script directory rather than the cwd.
@@ -510,7 +517,10 @@ if __name__ == "__main__":
     # Load configuration from the JSON5 file
     with open(args.network_config, 'r') as config_file:
         network_config = json5.load(config_file)
-    experiment_name = network_config.get('experiment')
+    # Fall back to the experimentDir forwarded by run_experiment.py when the
+    # network config leaves "experiment" empty, so the zenoh experiment_data/
+    # path mirrors the ns-3 output dir for the current setting.
+    experiment_name = network_config.get('experiment') or ZENOH_EXPERIMENT_DIR
     image_config = network_config.get('docker_image')
     image = image_config.get('tag')
     image_clean = image_config.get('clean_first')

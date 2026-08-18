@@ -47,5 +47,205 @@
         // "bgTrafficMbps": 5,
         // "bgTargetGnbs": "5,0,2",
         // "loadPercent": 0
-    }
+    },
+
+    // Optional: run several settings sequentially. When this array is present
+    // and non-empty, the top-level "ns3"/"rounds" block above is ignored and
+    // each entry below is run in order (all "rounds" rounds of setting 1, then
+    // setting 2, ...). "ns3_dir"/"zenoh_dir" stay global -- they are checkout
+    // locations, not experiment parameters -- so they are not repeated here.
+    //
+    // Each entry is fully self-contained. "rounds"/"launch_wait"/"round_pause"
+    // fall back to the top-level values (then built-in defaults) when omitted.
+    // "networkConfig" falls back to the -n CLI flag, then launch_nodes.py's own
+    // default. A failed round skips the rest of that setting and moves on to the
+    // next; the run exits non-zero if any setting failed.
+    "settings": [
+        {
+            "name": "presub-highway",
+            "networkConfig": "configs/pre-subscribe.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "highway",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 60,
+                "experimentDir": "latency/highway/presub"
+            }
+        },
+        {
+            "name": "baseline-highway",
+            "networkConfig": "configs/ablation-baseline.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "highway",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 60,
+                "experimentDir": "latency/highway/baseline"
+            }
+        },
+        {
+            "name": "presub-lcorner",
+            "networkConfig": "configs/pre-subscribe.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "l-corner",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 100,
+                "experimentDir": "latency/lcorner/presub"
+            }
+        },
+        {
+            "name": "baseline-lcorner",
+            "networkConfig": "configs/ablation-baseline.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "l-corner",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 100,
+                "experimentDir": "latency/lcorner/baseline"
+            }
+        },
+        {
+            "name": "presub-ucorner",
+            "networkConfig": "configs/pre-subscribe.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "u-corner",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 100,
+                "experimentDir": "latency/ucorner/presub"
+            }
+        },
+        {
+            "name": "baseline-ucorner",
+            "networkConfig": "configs/ablation-baseline.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "u-corner",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 100,
+                "experimentDir": "latency/ucorner/baseline"
+            }
+        },
+        {
+            "name": "bg-presub-highway",
+            "networkConfig": "configs/pre-subscribe.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "highway",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 60,
+                "numBgUes": 1,
+                "bgTrafficMbps": 5,
+                "bgTargetGnbs": "5,0,2",
+                "experimentDir": "latency/bg-highway/presub"
+            }
+        },
+        {
+            "name": "bg-baseline-highway",
+            "networkConfig": "configs/ablation-baseline.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "highway",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 60,
+                "numBgUes": 1,
+                "bgTrafficMbps": 5,
+                "bgTargetGnbs": "5,0,2",
+                "experimentDir": "latency/bg-highway/baseline"
+            }
+        },
+        {
+            "name": "bg-presub-lcorner",
+            "networkConfig": "configs/pre-subscribe.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "l-corner",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 100,
+                "numBgUes": 1,
+                "bgTrafficMbps": 5,
+                "bgTargetGnbs": "0,1,2",
+                "experimentDir": "latency/bg-lcorner/presub"
+            }
+        },
+        {
+            "name": "bg-baseline-lcorner",
+            "networkConfig": "configs/ablation-baseline.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "l-corner",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 100,
+                "numBgUes": 1,
+                "bgTrafficMbps": 5,
+                "bgTargetGnbs": "0,1,2",
+                "experimentDir": "latency/bg-lcorner/baseline"
+            }
+        },
+        {
+            "name": "bg-presub-ucorner",
+            "networkConfig": "configs/pre-subscribe.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "u-corner",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 100,
+                "numBgUes": 1,
+                "bgTrafficMbps": 5,
+                "bgTargetGnbs": "0,2,6",
+                "experimentDir": "latency/bg-ucorner/presub"
+            }
+        },
+        {
+            "name": "bg-baseline-ucorner",
+            "networkConfig": "configs/ablation-baseline.json5",
+            "rounds": 10,
+            "ns3": {
+                "enableTap": true,
+                "mobilityModel": "waypoint",
+                "builtinPath": "u-corner",
+                "mobilityStartDelay": 10,
+                "bandwidth": 20e6,
+                "simTime": 100,
+                "numBgUes": 1,
+                "bgTrafficMbps": 5,
+                "bgTargetGnbs": "0,2,6",
+                "experimentDir": "latency/bg-ucorner/baseline"
+            }
+        },
+    ]
 }

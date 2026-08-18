@@ -2,6 +2,13 @@
 """
 Experiment orchestration script.
 
+Runs one or more settings sequentially. A "setting" is a self-contained
+combination of ns-3 params, a network-config arm, and round/timing values,
+declared in EXPERIMENT_CONFIG.json5's optional `settings` array. Without that
+array the top-level ns3/rounds block is run as a single "default" setting
+(back-compat). Each setting runs its `rounds` rounds; a failed round skips the
+rest of that setting and moves to the next one.
+
 Per-round steps:
   1. Cleanup previous state via launch_nodes.py -c
   2. Start launch_nodes.py -t {simTime+60} in the background (the timer is
@@ -70,19 +77,23 @@ def _build_ns3_args(ns3_config: dict) -> str:
     return ' '.join(parts)
 
 
-def run_round(round_num: int, config: dict, network_config: str = None) -> bool:
+def run_round(setting: dict, round_num: int, global_config: dict) -> bool:
+    """Run a single round of one setting. `setting` carries the resolved ns3
+    params, networkConfig, and launch_wait; `global_config` carries the
+    checkout locations (ns3_dir, zenoh_dir) shared by every setting."""
     global _launch_proc, _ns3_proc
 
+    network_config = setting.get('networkConfig')
     # Forwarded to launch_nodes.py so both the cleanup and the launch act on the
     # same arm. Omitted entirely when unset, letting launch_nodes.py apply its
     # own default rather than duplicating that default here.
     net_args = ['-n', network_config] if network_config else []
 
-    ns3_config = config['ns3']
+    ns3_config = setting['ns3']
     # expanduser matters here: NS3_DIR is already expanded, but a value coming
     # from the config file is not, so a literal "~/dev/ns-3-dev" would be passed
     # to subprocess as cwd and fail with ENOENT.
-    ns3_dir = os.path.expanduser(config.get('ns3_dir', NS3_DIR))
+    ns3_dir = os.path.expanduser(global_config.get('ns3_dir', NS3_DIR))
 
     # Forwarded to launch_nodes.py, which mounts the zenoh build output. When
     # "zenoh_dir" is absent we leave the environment alone, so launch_nodes.py
@@ -90,7 +101,7 @@ def run_round(round_num: int, config: dict, network_config: str = None) -> bool:
     # before. When present it overrides the checkout location (see resolve_path
     # in launch_nodes.py); "~" is expanded there.
     launch_env = os.environ.copy()
-    zenoh_dir = config.get('zenoh_dir')
+    zenoh_dir = global_config.get('zenoh_dir')
     if zenoh_dir:
         launch_env['ZENOH_DIR'] = zenoh_dir
 
@@ -102,7 +113,7 @@ def run_round(round_num: int, config: dict, network_config: str = None) -> bool:
     if experiment_dir:
         launch_env['ZENOH_EXPERIMENT_DIR'] = experiment_dir
 
-    launch_wait = config.get('launch_wait', 12)
+    launch_wait = setting.get('launch_wait', 12)
     sim_time = ns3_config['simTime']
     auto_terminate = int(sim_time) + 60
 
@@ -169,20 +180,14 @@ def main():
     )
     parser.add_argument(
         '--rounds', '--round', type=int, default=None,
-        help='Override number of rounds from config',
+        help='Override number of rounds from config (applied to every setting)',
     )
     args = parser.parse_args()
 
     with open(args.config) as f:
         config = json5.load(f)
 
-    # Applied to the config dict rather than threaded through run_round, so it
-    # flows into _build_ns3_args like every other ns3 key.
-    if args.ns3_experiment_dir is not None:
-        config['ns3']['experimentDir'] = args.ns3_experiment_dir
-
-    rounds = args.rounds if args.rounds is not None else config.get('rounds', 1)
-    round_pause = config.get('round_pause', 5)
+    settings = _build_settings(config, args)
 
     signal.signal(signal.SIGINT, _signal_handler)
     signal.signal(signal.SIGTERM, _signal_handler)
@@ -192,20 +197,105 @@ def main():
     # print("Caching sudo credentials...")
     # subprocess.run(['sudo', '-v'], check=True)
 
-    print(f"Starting experiment: {rounds} round(s)")
-    print(f"  simTime={config['ns3']['simTime']}s, launch_wait={config.get('launch_wait', 12)}s")
-    print(f"  ns-3 output: {config['ns3'].get('experimentDir', '(unset)')}")
+    total_rounds = sum(s['rounds'] for s in settings)
+    print(f"Starting experiment: {len(settings)} setting(s), {total_rounds} round(s) total")
 
-    for i in range(1, rounds + 1):
-        success = run_round(i, config, args.network_config)
-        if not success:
-            print(f"Round {i} failed — aborting.")
-            sys.exit(1)
-        if i < rounds:
-            print(f"\nWaiting {round_pause}s before round {i + 1}...")
-            time.sleep(round_pause)
+    # (name, ok, rounds_completed, rounds_planned) per setting, for the summary
+    results = []
+    for si, setting in enumerate(settings, start=1):
+        rounds = setting['rounds']
+        round_pause = setting['round_pause']
+        ns3 = setting['ns3']
+        print(f"\n{'#'*60}")
+        print(f"Setting {si}/{len(settings)}: {setting['name']}")
+        print(f"  rounds={rounds}, net={setting.get('networkConfig') or '(default)'}")
+        print(f"  simTime={ns3['simTime']}s, launch_wait={setting['launch_wait']}s")
+        print(f"  ns-3 output: {ns3.get('experimentDir', '(unset)')}")
+        print(f"{'#'*60}")
 
-    print(f"\nAll {rounds} round(s) complete.")
+        completed = 0
+        setting_ok = True
+        for i in range(1, rounds + 1):
+            if not run_round(setting, i, config):
+                print(f"Setting '{setting['name']}' round {i} failed "
+                      f"— skipping remaining rounds, moving to next setting.")
+                setting_ok = False
+                break
+            completed += 1
+            if i < rounds:
+                print(f"\nWaiting {round_pause}s before round {i + 1}...")
+                time.sleep(round_pause)
+
+        results.append((setting['name'], setting_ok, completed, rounds))
+
+        if si < len(settings):
+            pause = settings[si]['round_pause']
+            print(f"\nWaiting {pause}s before setting '{settings[si]['name']}'...")
+            time.sleep(pause)
+
+    print(f"\n{'='*60}")
+    print("Summary")
+    print(f"{'='*60}")
+    for name, ok, completed, planned in results:
+        status = "ok" if ok else "FAILED"
+        print(f"  {name:<20} {status:<8} {completed}/{planned} rounds")
+
+    if any(not ok for _, ok, _, _ in results):
+        print("\nOne or more settings failed.")
+        sys.exit(1)
+    print(f"\nAll {len(settings)} setting(s) complete.")
+
+
+def _build_settings(config: dict, args) -> list:
+    """Return a list of normalized, self-contained setting dicts to run in order.
+
+    Each returned setting carries: name, ns3, networkConfig, rounds, launch_wait,
+    round_pause. When the config has no `settings` array we synthesize a single
+    setting from the top-level fields (back-compat with the original format).
+    Per-setting rounds/launch_wait/round_pause fall back to the top-level values,
+    then to built-in defaults. networkConfig falls back to the -n CLI flag."""
+    top_rounds = config.get('rounds', 1)
+    top_launch_wait = config.get('launch_wait', 12)
+    top_round_pause = config.get('round_pause', 5)
+
+    raw_settings = config.get('settings')
+    if raw_settings:
+        settings = []
+        for i, entry in enumerate(raw_settings, start=1):
+            settings.append({
+                'name': entry.get('name', f'setting-{i}'),
+                'ns3': entry['ns3'],
+                'networkConfig': entry.get('networkConfig', args.network_config),
+                'rounds': entry.get('rounds', top_rounds),
+                'launch_wait': entry.get('launch_wait', top_launch_wait),
+                'round_pause': entry.get('round_pause', top_round_pause),
+            })
+    else:
+        # Back-compat: one setting from the top-level ns3/rounds block.
+        settings = [{
+            'name': 'default',
+            'ns3': config['ns3'],
+            'networkConfig': args.network_config,
+            'rounds': top_rounds,
+            'launch_wait': top_launch_wait,
+            'round_pause': top_round_pause,
+        }]
+
+    # --rounds overrides every setting's round count.
+    if args.rounds is not None:
+        for s in settings:
+            s['rounds'] = args.rounds
+
+    # --ns3-experiment-dir would collide across multiple settings (all writing
+    # the same dir), so it only applies when there is exactly one setting.
+    if args.ns3_experiment_dir is not None:
+        if len(settings) == 1:
+            settings[0]['ns3']['experimentDir'] = args.ns3_experiment_dir
+        else:
+            print(f"WARNING — ignoring --ns3-experiment-dir with {len(settings)} "
+                  f"settings; experimentDir stays per-setting.")
+
+    return settings
 
 
 if __name__ == '__main__':
